@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Upload, Plus, Trash2, ExternalLink, Package, Loader2, Truck, X, Check, CheckCircle2, Receipt } from 'lucide-react';
+import { FileText, Plus, Trash2, ExternalLink, Package, Loader2, Truck, X, Check, CheckCircle2, Receipt } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import FileDropzone from '../ui/FileDropzone';
 
 // Indkøbs-/leveringsstatus pr. materiale — samme værdier som beregner-sagerne,
 // så sags-overblikkets "Bestilt/Leveret" også virker på manuelle sager.
@@ -46,6 +47,11 @@ export default function ManualMaterialsView({ lead, profile, onUpdate, onOpenBui
     const [form, setForm] = useState({ name: '', amount: '', file: null, file_name: '' });
     const [saving, setSaving] = useState(false);
     const [bulkBusy, setBulkBusy] = useState(false);
+    // "Læg materialer på fakturaen" — styrer det SAMLEDE faktura-toggle (invoice_materials.included),
+    // som fakturaen og caseFinance også bruger. Default afspejler nuværende valg (timepris = til).
+    const [addToInvoice, setAddToInvoice] = useState(
+        rd.invoice_materials?.included != null ? rd.invoice_materials.included : (rd.billing_mode === 'hourly')
+    );
 
     // Manuelt sat budget (raw_data.material_budget, sagsindstillinger) vinder over tilbuddets tal.
     const budget = (rd.material_budget !== undefined && rd.material_budget !== null && rd.material_budget !== '')
@@ -104,10 +110,17 @@ export default function ManualMaterialsView({ lead, profile, onUpdate, onOpenBui
             const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
             const cur = latest?.raw_data || rd;
             const next = [...(cur.supplier_invoices || []), newInv];
-            await persist({ supplier_invoices: next });
+            // Sæt også det samlede faktura-toggle, så materialerne (med avance) lægges
+            // oveni fakturaen — samme flag som fakturaen og caseFinance læser.
+            const patch = { supplier_invoices: next };
+            const curIncluded = cur.invoice_materials?.included != null ? cur.invoice_materials.included : (cur.billing_mode === 'hourly');
+            if (addToInvoice !== curIncluded) {
+                patch.invoice_materials = { ...(cur.invoice_materials || {}), included: addToInvoice };
+            }
+            await persist(patch);
             setForm({ name: '', amount: '', file: null, file_name: '' });
             setShowAdd(false);
-            toast.success('Materiale tilføjet');
+            toast.success(addToInvoice ? 'Materiale tilføjet — lægges på fakturaen' : 'Materiale tilføjet');
         } catch (e) {
             toast.error('Kunne ikke gemme: ' + (e.message || e));
         } finally {
@@ -345,25 +358,13 @@ export default function ManualMaterialsView({ lead, profile, onUpdate, onOpenBui
 
                                 <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     {/* Dropzone */}
-                                    <label style={{ display: 'block', cursor: 'pointer' }}>
-                                        <input type="file" accept="application/pdf,image/*" style={{ display: 'none' }}
-                                            onChange={(e) => { const f = e.target.files?.[0]; if (f) setForm({ ...form, file: f, file_name: f.name }); e.target.value = ''; }} />
-                                        <div style={{ border: `2px dashed ${form.file ? '#86efac' : '#cbd5e1'}`, background: form.file ? '#f0fdf4' : '#f8fafc', borderRadius: '14px', padding: '22px', textAlign: 'center', transition: 'all 0.2s' }}>
-                                            {form.file ? (
-                                                <>
-                                                    <CheckCircle2 size={28} color="#22c55e" style={{ margin: '0 auto' }} />
-                                                    <div style={{ marginTop: '8px', fontWeight: 700, color: '#0f172a', fontSize: '0.9rem', wordBreak: 'break-all' }}>{form.file_name}</div>
-                                                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>Tryk for at skifte fil</div>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Upload size={28} color="#94a3b8" style={{ margin: '0 auto' }} />
-                                                    <div style={{ marginTop: '8px', fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>Vælg PDF eller billede</div>
-                                                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>Valgfrit — fx listen fra Davidsen</div>
-                                                </>
-                                            )}
-                                        </div>
-                                    </label>
+                                    <FileDropzone
+                                        accept="application/pdf,image/*"
+                                        onFiles={(files) => { const f = files[0]; if (f) setForm({ ...form, file: f, file_name: f.name }); }}
+                                        selectedName={form.file ? form.file_name : null}
+                                        title="Træk PDF/billede hertil eller klik"
+                                        hint="Valgfrit — fx listen fra Davidsen"
+                                    />
 
                                     {/* Navn */}
                                     <div>
@@ -383,6 +384,18 @@ export default function ManualMaterialsView({ lead, profile, onUpdate, onOpenBui
                                             <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontWeight: 700 }}>kr.</span>
                                         </div>
                                     </div>
+
+                                    {/* Læg på fakturaen */}
+                                    <button type="button" onClick={() => setAddToInvoice(v => !v)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', borderRadius: '12px', border: `1px solid ${addToInvoice ? '#bfdbfe' : '#e2e8f0'}`, background: addToInvoice ? '#eff6ff' : '#f8fafc', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
+                                        <div style={{ width: '22px', height: '22px', borderRadius: '7px', flexShrink: 0, border: `2px solid ${addToInvoice ? '#2563eb' : '#cbd5e1'}`, background: addToInvoice ? '#2563eb' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+                                            {addToInvoice && <Check size={14} color="#fff" />}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.92rem' }}>Læg materialer på fakturaen</div>
+                                            <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Materialerne lægges oveni fakturaen (med avance). Kan altid ændres på fakturaen.</div>
+                                        </div>
+                                    </button>
 
                                     {/* Knapper */}
                                     <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>

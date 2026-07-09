@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, FileText, Send, Save, Package, Mail, Pencil, X, Maximize2, Minimize2, Truck } from 'lucide-react';
+import { Plus, Trash2, FileText, Send, Save, Package, Mail, Pencil, X, Maximize2, Minimize2, Truck, Loader2 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { friendlyError } from '../../utils/friendlyError';
 import { buildMaterialListPdf } from '../../utils/materialListPdf';
 import { generateMaterialList } from '../../utils/materialGenerator';
 import { getSupplierMaterialRequestTemplate, getCarpenterSenderName } from '../../utils/emailTemplates';
+import SupplierPicker from '../ui/SupplierPicker';
 
 const uid = () => (crypto?.randomUUID ? crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 const UNITS = ['stk', 'sæt', 'pk', 'm2', 'm', 'lbm', 'rulle', 'kasse', 'palle', 'pose', 'plade', 'dåse', 'liter', 'kg'];
@@ -114,6 +115,54 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
     const [supplierContact, setSupplierContact] = useState(sup0.contact || '');
     const [supplierEmail, setSupplierEmail] = useState(sup0.email || '');
     const [emailMessage, setEmailMessage] = useState(initialLead?.raw_data?.material_request_message || STANDARD_SUPPLIER_MSG);
+
+    // Leverandør-bibliotek: hent gemte leverandører, så man kan vælge en igen i stedet
+    // for at taste forfra. Firma-scopet på carpenter.id (RLS spejler customers).
+    const [suppliers, setSuppliers] = useState([]);
+    const [selectedSupplierId, setSelectedSupplierId] = useState(null);
+    const [savingSupplier, setSavingSupplier] = useState(false);
+    const loadSuppliers = async () => {
+        if (!carpenter?.id) return;
+        const { data } = await supabase.from('suppliers').select('*').eq('carpenter_id', carpenter.id).order('name', { ascending: true });
+        setSuppliers(data || []);
+    };
+    useEffect(() => { loadSuppliers(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [carpenter?.id]);
+
+    const pickSupplier = (s) => {
+        setSelectedSupplierId(s.id);
+        setSupplierName(s.name || '');
+        setSupplierContact(s.contact_name || '');
+        setSupplierEmail(s.email || '');
+    };
+
+    // Gem den aktuelt indtastede leverandør i biblioteket (opret eller opdater den valgte).
+    const saveSupplierToLibrary = async () => {
+        if (!supplierName.trim()) { toast.error('Skriv leverandørens navn først'); return; }
+        setSavingSupplier(true);
+        try {
+            const payload = {
+                carpenter_id: carpenter.id,
+                name: supplierName.trim(),
+                contact_name: supplierContact.trim() || null,
+                email: supplierEmail.trim() || null,
+            };
+            if (selectedSupplierId) {
+                const { error } = await supabase.from('suppliers').update(payload).eq('id', selectedSupplierId);
+                if (error) throw error;
+                toast.success('Leverandør opdateret i biblioteket');
+            } else {
+                const { data, error } = await supabase.from('suppliers').insert([{ ...payload, created_by: carpenter?.id || null }]).select().single();
+                if (error) throw error;
+                if (data?.id) setSelectedSupplierId(data.id);
+                toast.success('Leverandør gemt i biblioteket');
+            }
+            loadSuppliers();
+        } catch (e) {
+            toast.error('Kunne ikke gemme leverandøren: ' + (e.message || e));
+        } finally {
+            setSavingSupplier(false);
+        }
+    };
 
     // Preview-fane (mobil) + trækbare kolonner (desktop)
     const [previewTab, setPreviewTab] = useState('edit');
@@ -497,10 +546,21 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
         <div className="mlb-col" style={rightStyle}>
             {zoneHead(<Mail size={16} color="#8b5cf6" />, 'Mail til leverandøren', '#ffffff')}
             <div style={{ flex: 1, minHeight: 0, padding: '18px', display: 'flex', flexDirection: 'column' }}>
+                {/* Vælg gemt leverandør fra biblioteket (eller tast manuelt nedenfor) */}
+                <div style={{ marginBottom: '14px' }}>
+                    <label style={label}>Vælg gemt leverandør</label>
+                    <SupplierPicker
+                        suppliers={suppliers}
+                        value={selectedSupplierId}
+                        onSelect={pickSupplier}
+                        onClear={() => setSelectedSupplierId(null)}
+                        placeholder="— eller tast manuelt nedenfor —"
+                    />
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px', marginBottom: '14px', alignItems: 'start' }}>
                     <div>
                         <label style={label}>Leverandør (firma)</label>
-                        <input className="mlb-input" style={input} value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="F.eks. Davidsen" />
+                        <input className="mlb-input" style={input} value={supplierName} onChange={(e) => { setSupplierName(e.target.value); setSelectedSupplierId(null); }} placeholder="F.eks. Davidsen" />
                     </div>
                     <div>
                         <label style={label}>Kontaktperson <span style={{ color: '#94a3b8', fontWeight: 500 }}>(valgfrit)</span></label>
@@ -510,6 +570,15 @@ export default function MaterialListBuilder({ carpenter, isMobile = false, onCan
                         <label style={label}>Leverandørens e-mail</label>
                         <input className="mlb-input" style={fieldErrors.supplierEmail ? { ...input, borderColor: '#ef4444', boxShadow: '0 0 0 3px rgba(239,68,68,0.12)' } : input} type="email" value={supplierEmail} onChange={(e) => { setSupplierEmail(e.target.value); setFieldErrors({}); }} placeholder="salg@davidsen.dk" />
                         <span style={{ display: 'block', marginTop: '4px', fontSize: '0.72rem', color: '#94a3b8', fontWeight: 500 }}>Kræves for at sende. Hilsenen i mailen bruger kontaktpersonen, hvis udfyldt.</span>
+                    </div>
+                    <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1' }}>
+                        <button type="button" onClick={saveSupplierToLibrary} disabled={savingSupplier || !supplierName.trim()}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 14px', borderRadius: '10px', border: '1px dashed #cbd5e1', background: '#fff', color: supplierName.trim() ? '#2563eb' : '#94a3b8', fontWeight: 700, fontSize: '0.85rem', cursor: supplierName.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.15s' }}
+                            onMouseEnter={(e) => { if (supplierName.trim()) { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.background = '#eff6ff'; } }}
+                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#fff'; }}>
+                            {savingSupplier ? <Loader2 size={14} className="mlb-spin" /> : <Save size={14} />}
+                            {selectedSupplierId ? 'Opdatér leverandør i biblioteket' : 'Gem som leverandør'}
+                        </button>
                     </div>
                 </div>
                 <label style={label}>Personlig besked i mailen</label>

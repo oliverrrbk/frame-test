@@ -4,6 +4,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { PenTool, Upload, Trash2, Calendar, FileText, Image as ImageIcon, X, ChevronLeft, ChevronRight, Download, ExternalLink } from 'lucide-react';
 import DrawingBoard from '../Drawings/DrawingBoard';
+import FileDropzone from '../ui/FileDropzone';
 import UserAvatar from '../ui/UserAvatar';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
@@ -111,8 +112,11 @@ export default function CaseDrawingsTab({ selectedCase, profile, isMobile = fals
     };
 
     const handleFileUpload = async (event) => {
-        const files = Array.from(event.target.files || []);
-        if (files.length === 0) return;
+        await processUploadFiles(Array.from(event.target.files || []));
+    };
+
+    const processUploadFiles = async (files) => {
+        if (!files || files.length === 0) return;
 
         setIsUploading(true);
         const toastId = toast.loading(files.length > 1 ? `Uploader ${files.length} tegninger...` : "Uploader tegning...");
@@ -573,6 +577,18 @@ export default function CaseDrawingsTab({ selectedCase, profile, isMobile = fals
                         Tegn Ny Skitse
                     </button>
                 </div>
+            </div>
+
+            {/* Træk-og-slip: PDF/billede kan trækkes direkte ind her */}
+            <div style={{ marginBottom: '24px' }}>
+                <FileDropzone
+                    accept="application/pdf,image/*"
+                    multiple
+                    disabled={isUploading}
+                    onFiles={(files) => processUploadFiles(files)}
+                    title={isUploading ? 'Uploader…' : 'Træk tegninger (PDF/billede) hertil eller klik'}
+                    hint="Officielle arkitekttegninger, skitser m.m."
+                />
             </div>
 
             {isLoading ? (

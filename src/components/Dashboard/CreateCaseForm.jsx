@@ -45,7 +45,13 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
     const [startDate, setStartDate] = useState('');
     const [billingMode, setBillingMode] = useState('hourly');
     const [fixedPrice, setFixedPrice] = useState('');   // fast pris, ekskl. moms
-    const [hourlyRate, setHourlyRate] = useState('');   // timepris kr/time, ekskl. moms
+    // Timepris kr/time (ekskl. moms). Forudfyldes med firmaets timepris (fallback 550),
+    // så en timepris-sag ALTID har en sats gemt — ellers ville registrerede timer regne
+    // til 0 kr på fakturaen. Kan altid rettes af brugeren.
+    const [hourlyRate, setHourlyRate] = useState(() => {
+        const def = Number(carpenter?.hourly_rate || carpenter?.raw_data?.hourly_rate || 550) || 550;
+        return String(def);
+    });
     // Omvendt betalingspligt gælder KUN byggeydelser (B2B) — ikke al erhverv. Derfor
     // default MED moms, og man vælger selv omvendt betalingspligt til ved byggeydelser.
     const [reverseCharge, setReverseCharge] = useState(false);

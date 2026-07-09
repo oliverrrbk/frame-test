@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLoadScript, Autocomplete } from '@react-google-maps/api';
-import { Plus, Trash2, FileText, Upload, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic, Files, Bold, Italic, Underline, List, ListOrdered, Heading2, Heading3, AlignLeft, AlignCenter, AlignRight, Table as TableIcon, ChevronLeft, Eye } from 'lucide-react';
+import { Plus, Trash2, FileText, Send, Save, Hammer, Package, User, Mail, CheckCircle2, Pencil, X, Maximize2, Minimize2, Mic, Files, Bold, Italic, Underline, List, ListOrdered, Heading2, Heading3, AlignLeft, AlignCenter, AlignRight, Table as TableIcon, ChevronLeft, Eye } from 'lucide-react';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 import { supabase, authHeaders } from '../../supabaseClient';
 import toast from 'react-hot-toast';
@@ -15,6 +15,7 @@ import SmtpIntegration from './SmtpIntegration';
 import WorkBreakdownModal, { totalManHours } from './WorkBreakdownModal';
 import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
 import CustomerPicker from '../ui/CustomerPicker';
+import FileDropzone from '../ui/FileDropzone';
 import PdfCanvasPreview from './PdfCanvasPreview';
 
 // Første-gangs walkthrough af Hurtigt tilbud (kun desktop, kun én gang, altid spring-bar).
@@ -1342,10 +1343,11 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     <button onClick={() => setPdfToRemove({ transient: true, name: materialFile.name })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><Trash2 size={16} /></button>
                 </div>
             ) : (
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', border: '2px dashed #cbd5e1', borderRadius: '12px', cursor: 'pointer', color: '#64748b', fontWeight: 600 }}>
-                    <Upload size={18} /> Vedhæft PDF
-                    <input type="file" accept="application/pdf,image/*" style={{ display: 'none' }} onChange={(e) => setMaterialFile(e.target.files?.[0] || null)} />
-                </label>
+                <FileDropzone
+                    accept="application/pdf,image/*"
+                    onFiles={(files) => setMaterialFile(files[0] || null)}
+                    title="Træk PDF hertil eller klik for at vedhæfte"
+                />
             )}
         </>
     );

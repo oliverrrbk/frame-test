@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, ChevronDown, CheckCircle2, FileText, Building2, Send, Loader2, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
+import FileDropzone from '../ui/FileDropzone';
 
 const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInvoice }) => {
     const [showUploadForm, setShowUploadForm] = useState(false);
@@ -14,6 +15,11 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
     const [sendingId, setSendingId] = useState(null);
     const [isSendingAll, setIsSendingAll] = useState(false);
+    // "Læg materialer på fakturaen" — kun relevant for kategori Materialer. Styrer det
+    // samlede invoice_materials.included-flag (samme som fakturaen/caseFinance).
+    const [addToInvoice, setAddToInvoice] = useState(
+        lead?.raw_data?.invoice_materials?.included != null ? lead.raw_data.invoice_materials.included : (lead?.raw_data?.billing_mode === 'hourly')
+    );
 
     const rawSupplierInvoices = lead?.raw_data?.supplier_invoices || [];
     
@@ -201,18 +207,28 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
             category: newSupplierInvoice.category || 'Materialer',
             file_path: filePath,      // sti i privat 'bilag'-bucket (nyt)
             file_name: newSupplierInvoice.file_name,
-            material_list_id: newSupplierInvoice.material_list_id || null
+            material_list_id: newSupplierInvoice.material_list_id || null,
+            // Så et materiale-bilag oprettet her også vises korrekt (med status) under
+            // sagens "Materialer & Indkøb" — samme form som ManualMaterialsView skriver.
+            delivery_status: 'Ikke bestilt'
         };
 
         try {
             const { data: latestData } = await supabase.from('leads').select('raw_data').eq('id', lead.id).single();
             const currentRawData = latestData?.raw_data || lead.raw_data || {};
 
+            // Materiale-bilag: sæt også det samlede faktura-toggle efter checkboxen.
+            const isMaterial = (newInv.category === 'Materialer' || !newInv.category);
+            const invoiceMaterialsPatch = isMaterial
+                ? { invoice_materials: { ...(currentRawData.invoice_materials || {}), included: addToInvoice } }
+                : {};
+
             const updatedCase = {
                 ...lead,
                 raw_data: {
                     ...currentRawData,
-                    supplier_invoices: [...(currentRawData.supplier_invoices || []), newInv]
+                    supplier_invoices: [...(currentRawData.supplier_invoices || []), newInv],
+                    ...invoiceMaterialsPatch
                 }
             };
 
@@ -236,8 +252,7 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
         }
     };
 
-    const handleFileUpload = (e) => {
-        const file = e.target.files[0];
+    const acceptFile = (file) => {
         if (!file) return;
 
         if (!file.type.includes('pdf') && !file.type.includes('image')) {
@@ -305,24 +320,13 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
                                 {/* Body */}
                                 <form onSubmit={handleUploadSupplier} style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     {/* Fil-dropzone */}
-                                    <div style={{ position: 'relative', width: '100%', height: isMobile ? '150px' : '130px', border: '2px dashed #cbd5e1', borderRadius: '16px', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', transition: 'border-color 0.2s, background 0.2s' }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#f59e0b'; e.currentTarget.style.background = '#fffbeb'; }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}>
-                                        <input type="file" accept="image/*,application/pdf" onChange={handleFileUpload} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 10 }} />
-                                        {newSupplierInvoice.file ? (
-                                            <>
-                                                <div style={{ color: '#10b981', marginBottom: '6px' }}><CheckCircle2 size={30} /></div>
-                                                <div style={{ fontSize: '0.95rem', color: '#0f172a', fontWeight: 'bold' }}>{newSupplierInvoice.file_name}</div>
-                                                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Tryk for at skifte fil</div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div style={{ color: '#94a3b8', marginBottom: '8px' }}><Upload size={30} /></div>
-                                                <div style={{ fontSize: '0.98rem', color: '#475569', fontWeight: '600' }}>Vælg PDF eller billede</div>
-                                                <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Valgfrit – men anbefales</div>
-                                            </>
-                                        )}
-                                    </div>
+                                    <FileDropzone
+                                        accept="image/*,application/pdf"
+                                        onFiles={(files) => acceptFile(files[0])}
+                                        selectedName={newSupplierInvoice.file ? newSupplierInvoice.file_name : null}
+                                        title="Træk PDF/billede hertil eller klik"
+                                        hint="Valgfrit – men anbefales"
+                                    />
 
                                     <input
                                         type="text"
@@ -428,6 +432,20 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
                                         />
                                         <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.9rem', fontWeight: '500' }}>kr.</span>
                                     </div>
+
+                                    {/* Læg materialer på fakturaen — kun for kategori Materialer */}
+                                    {(newSupplierInvoice.category === 'Materialer' || !newSupplierInvoice.category) && (
+                                        <button type="button" onClick={() => setAddToInvoice(v => !v)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', borderRadius: '12px', border: `1px solid ${addToInvoice ? '#bfdbfe' : '#e2e8f0'}`, background: addToInvoice ? '#eff6ff' : '#f8fafc', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
+                                            <div style={{ width: '22px', height: '22px', borderRadius: '7px', flexShrink: 0, border: `2px solid ${addToInvoice ? '#2563eb' : '#cbd5e1'}`, background: addToInvoice ? '#2563eb' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+                                                {addToInvoice && <CheckCircle2 size={14} color="#fff" />}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.92rem' }}>Læg materialer på fakturaen</div>
+                                                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Materialerne lægges oveni fakturaen (med avance). Kan altid ændres på fakturaen.</div>
+                                            </div>
+                                        </button>
+                                    )}
 
                                     <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
                                         <button type="button" onClick={() => setShowUploadForm(false)} style={{ flex: '0 0 auto', padding: '14px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', cursor: 'pointer', fontWeight: 600 }}>Annullér</button>

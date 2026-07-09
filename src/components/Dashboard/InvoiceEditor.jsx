@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ArrowRight, Send, Upload, FileText, CheckCircle2, ChevronDown, Plus, Banknote, Building2, User, Phone, Mail, MapPin, AlertCircle, Edit2, Save, Clock, Receipt } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Send, Upload, FileText, CheckCircle2, ChevronDown, Plus, Banknote, Building2, User, Phone, Mail, MapPin, AlertCircle, Edit2, Save, Clock, Receipt, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
 import BilagManager from './BilagManager';
@@ -47,6 +47,19 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
     };
     const setMaterialsIncluded = (val) => { setMaterialsIncludedState(val); persistMaterialsCfg(val, materialMarkupPct); };
     const setMaterialMarkupPct = (val) => { setMaterialMarkupPctState(val); persistMaterialsCfg(materialsIncluded, val); };
+
+    // Ekstra fakturalinjer ("ekstraarbejde" mv.): fri tekst + beløb (ekskl. moms) som
+    // tømreren kan tilføje direkte på fakturaen — står som egne linjer og ryger med til
+    // Dinero/e-conomic. Gemmes på sagen (raw_data.invoice_extra_lines).
+    const [extraLines, setExtraLinesState] = useState(lead.raw_data?.invoice_extra_lines || []);
+    const persistExtraLines = (lines) => {
+        setExtraLinesState(lines);
+        if (onUpdateLead) onUpdateLead({ ...lead, raw_data: { ...(lead.raw_data || {}), invoice_extra_lines: lines } });
+    };
+    const addExtraLine = () => persistExtraLines([...extraLines, { id: `extra_${Date.now()}`, description: '', amount: '' }]);
+    const updateExtraLine = (id, patch) => persistExtraLines(extraLines.map(l => l.id === id ? { ...l, ...patch } : l));
+    const removeExtraLine = (id) => persistExtraLines(extraLines.filter(l => l.id !== id));
+    const parseKr = (v) => parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0;
 
     const isB2B = !!(lead.raw_data?.customerDetails?.cvr);
     // Standard er ALTID med moms — også for erhverv. Omvendt betalingspligt er kun slået
@@ -100,7 +113,11 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
         : 0;
     const materialsInclVat = Math.round(billableMaterialsExVat * vatMult);
 
-    const totalToBill = basePrice + extraPrice + materialsInclVat;
+    // Ekstra fakturalinjer (fri tekst + beløb ekskl. moms).
+    const extraLinesExVat = extraLines.reduce((sum, l) => sum + parseKr(l.amount), 0);
+    const extraLinesInclVat = Math.round(extraLinesExVat * vatMult);
+
+    const totalToBill = basePrice + extraPrice + materialsInclVat + extraLinesInclVat;
 
     const invoiced = isManualCase
         ? Math.round((Number(lead.raw_data?.invoiced_amount) || 0) * vatMult)
@@ -139,6 +156,11 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                 const matDesc = materialMarkupPct > 0 ? 'Materialer (inkl. avance)' : 'Materialer';
                 invoiceLines.push({ description: matDesc, priceExVat: billableMaterialsExVat });
             }
+            // Ekstra linjer (ekstraarbejde mv.) — egne linjer på fakturaen, ekskl. moms.
+            extraLines.forEach(l => {
+                const amt = parseKr(l.amount);
+                if (amt !== 0) invoiceLines.push({ description: (l.description || '').trim() || 'Ekstraarbejde', priceExVat: amt });
+            });
             if (invoiced > 0) invoiceLines.push({ description: 'Tidligere Aconto betalt', priceExVat: -(invoiced / (isReverseCharge ? 1 : 1.25)) });
         }
 
@@ -556,6 +578,47 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                 </div>
                             )}
 
+                            {/* EKSTRA LINJER (ekstraarbejde mv.) — fri tekst + beløb, egne linjer på fakturaen */}
+                            {extraLines.map((line) => (
+                                <div key={line.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: '#fffdf5', borderRadius: '12px', border: '1px solid #fde68a' }}>
+                                    <input
+                                        value={line.description}
+                                        onChange={(e) => updateExtraLine(line.id, { description: e.target.value })}
+                                        placeholder="Beskrivelse (fx ekstraarbejde: udskiftning af råddent bræt)"
+                                        style={{ flex: 1, minWidth: 0, padding: '10px 12px', borderRadius: '9px', border: '1px solid #e2e8f0', fontSize: isMobile ? '16px' : '0.92rem', outline: 'none', background: '#fff' }}
+                                    />
+                                    <div style={{ position: 'relative', width: isMobile ? '120px' : '140px', flexShrink: 0 }}>
+                                        <input
+                                            inputMode="decimal"
+                                            value={line.amount}
+                                            onChange={(e) => updateExtraLine(line.id, { amount: e.target.value.replace(/[^0-9.,]/g, '') })}
+                                            placeholder="0"
+                                            style={{ width: '100%', boxSizing: 'border-box', padding: '10px 34px 10px 12px', borderRadius: '9px', border: '1px solid #e2e8f0', fontSize: isMobile ? '16px' : '0.92rem', outline: 'none', textAlign: 'right', background: '#fff', fontWeight: 600 }}
+                                        />
+                                        <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600, pointerEvents: 'none' }}>kr.</span>
+                                    </div>
+                                    <button onClick={() => removeExtraLine(line.id)} title="Fjern linje" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: '4px', flexShrink: 0 }} onMouseEnter={e => e.currentTarget.style.color = '#ef4444'} onMouseLeave={e => e.currentTarget.style.color = '#cbd5e1'}>
+                                        <Trash2 size={17} />
+                                    </button>
+                                </div>
+                            ))}
+
+                            <button
+                                onClick={addExtraLine}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '12px', border: '1px dashed #cbd5e1', background: '#fff', color: '#475569', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.15s' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#f59e0b'; e.currentTarget.style.background = '#fffbeb'; e.currentTarget.style.color = '#b45309'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#475569'; }}
+                            >
+                                <Plus size={16} /> Tilføj ekstra linje (ekstraarbejde)
+                            </button>
+
+                            {extraLinesExVat > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 14px', fontSize: '0.85rem', color: '#64748b' }}>
+                                    <span>Ekstra linjer {isReverseCharge ? 'ekskl.' : 'inkl.'} moms</span>
+                                    <span style={{ fontWeight: 700, color: '#b45309' }}>+ {extraLinesInclVat.toLocaleString('da-DK')} kr.</span>
+                                </div>
+                            )}
+
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: '2px dashed #e2e8f0', marginTop: '8px' }}>
                                 <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '1.1rem' }}>Samlet Opgavesum {isReverseCharge ? 'ekskl.' : 'inkl.'} moms</div>
                                 <div style={{ fontWeight: '800', fontSize: '1.2rem', color: '#0f172a' }}>
@@ -827,6 +890,12 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                                             <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{billableMaterialsExVat.toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
                                                         </div>
                                                     )}
+                                                    {extraLines.filter(l => parseKr(l.amount) !== 0).map(l => (
+                                                        <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
+                                                            <span style={{ color: '#475569' }}>{(l.description || '').trim() || 'Ekstraarbejde'}</span>
+                                                            <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{parseKr(l.amount).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.</span>
+                                                        </div>
+                                                    ))}
                                                     {invoiced > 0 && (
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
                                                             <span style={{ color: '#475569' }}>Allerede faktureret</span>
@@ -941,6 +1010,17 @@ const InvoiceEditor = ({ lead, onBack, carpenterProfile, onSendToAccounting, onO
                                                             </td>
                                                         </tr>
                                                     )}
+                                                    {extraLines.filter(l => parseKr(l.amount) !== 0).map(l => (
+                                                        <tr key={l.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                            <td style={{ padding: '20px 0' }}>
+                                                                <div style={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}>{(l.description || '').trim() || 'Ekstraarbejde'}</div>
+                                                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Ekstraarbejde</div>
+                                                            </td>
+                                                            <td style={{ padding: '20px 0', textAlign: 'right', fontWeight: 'bold', color: '#0f172a' }}>
+                                                                {parseKr(l.amount).toLocaleString('da-DK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} kr.
+                                                            </td>
+                                                        </tr>
+                                                    ))}
                                                     {invoiced > 0 && (
                                                         <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                                                             <td style={{ padding: '20px 0' }}>

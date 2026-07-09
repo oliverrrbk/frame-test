@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, ChevronDown, ChevronUp, FolderPlus, Truck, Upload, FileText, ExternalLink, Calculator, Send, AlertTriangle, CheckCircle, Package, ArrowRight, Printer, Info, CreditCard, Minus, MapPin, Wallet, ShoppingCart, TrendingDown, TrendingUp, Calendar, X, Receipt, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Download, Save, PlusCircle, Check, Loader2, Mail, ChevronDown, ChevronUp, FolderPlus, Truck, Upload, FileText, ExternalLink, Calculator, Send, AlertTriangle, CheckCircle, Package, ArrowRight, Printer, Info, CreditCard, Minus, MapPin, Wallet, ShoppingCart, TrendingDown, TrendingUp, Calendar, X, Receipt } from 'lucide-react';
 import { generateMaterialList } from '../../utils/materialGenerator';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
+import FileDropzone from '../ui/FileDropzone';
 import { friendlyError } from '../../utils/friendlyError';
 
 const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryToCalendar, existingDeliveryDate, onOpenBuilder, simpleView = false }) => {
@@ -690,25 +691,13 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                     <button onClick={() => !savingMat && setShowAddMat(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', flexShrink: 0 }}><X size={18} /></button>
                 </div>
                 <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <label style={{ display: 'block', cursor: 'pointer' }}>
-                        <input type="file" accept="application/pdf,image/*" style={{ display: 'none' }}
-                            onChange={(e) => { const f = e.target.files?.[0]; if (f) setMatForm({ ...matForm, file: f, file_name: f.name }); e.target.value = ''; }} />
-                        <div style={{ border: `2px dashed ${matForm.file ? '#86efac' : '#cbd5e1'}`, background: matForm.file ? '#f0fdf4' : '#f8fafc', borderRadius: '14px', padding: '22px', textAlign: 'center', transition: 'all 0.2s' }}>
-                            {matForm.file ? (
-                                <>
-                                    <CheckCircle2 size={28} color="#22c55e" style={{ margin: '0 auto' }} />
-                                    <div style={{ marginTop: '8px', fontWeight: 700, color: '#0f172a', fontSize: '0.9rem', wordBreak: 'break-all' }}>{matForm.file_name}</div>
-                                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>Tryk for at skifte fil</div>
-                                </>
-                            ) : (
-                                <>
-                                    <Upload size={28} color="#94a3b8" style={{ margin: '0 auto' }} />
-                                    <div style={{ marginTop: '8px', fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>Vælg PDF eller billede</div>
-                                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>Valgfrit — fx listen fra Davidsen</div>
-                                </>
-                            )}
-                        </div>
-                    </label>
+                    <FileDropzone
+                        accept="application/pdf,image/*"
+                        onFiles={(files) => { const f = files[0]; if (f) setMatForm({ ...matForm, file: f, file_name: f.name }); }}
+                        selectedName={matForm.file ? matForm.file_name : null}
+                        title="Træk PDF/billede hertil eller klik"
+                        hint="Valgfrit — fx listen fra Davidsen"
+                    />
                     <div>
                         <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Navn</label>
                         <input autoFocus value={matForm.name} onChange={(e) => setMatForm({ ...matForm, name: e.target.value })} placeholder="fx Materialeliste – Davidsen"

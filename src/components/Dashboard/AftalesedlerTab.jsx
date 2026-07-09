@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { supabase } from '../../supabaseClient';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 import { buildAgreementPdf } from '../../utils/agreementPdf';
+import PdfCanvasPreview from './PdfCanvasPreview';
 import { sendEmail } from '../../utils/sendEmail';
 import { getAgreementEmailTemplate } from '../../utils/emailTemplates';
 import { friendlyError } from '../../utils/friendlyError';
@@ -252,7 +253,8 @@ export default function AftalesedlerTab({ selectedCase, profile, carpenterProfil
                 pdfDataUri = built.dataUri;
             }
             const base64 = pdfDataUri.substring(pdfDataUri.indexOf(',') + 1);
-            const pdfUrl = URL.createObjectURL(dataUriToBlob(pdfDataUri));
+            const pdfBlob = dataUriToBlob(pdfDataUri);
+            const pdfUrl = URL.createObjectURL(pdfBlob);
 
             // Bekræftelses-link kun hvis sedlen ikke allerede er bekræftet.
             const confirmed = isConfirmed(agreement);
@@ -266,7 +268,7 @@ export default function AftalesedlerTab({ selectedCase, profile, carpenterProfil
             setPreviewEmail(caseCustomer.email && caseCustomer.email !== 'Ukendt' ? caseCustomer.email : '');
             setPreviewMessage(confirmed ? DEFAULT_MSG_COPY : DEFAULT_MSG_CONFIRM);
             setPreviewTab('pdf');
-            setPreview({ agreement, pdfUrl, base64, confirmUrl, confirmed });
+            setPreview({ agreement, pdfUrl, pdfBlob, base64, confirmUrl, confirmed });
         } catch (error) {
             console.error('Kunne ikke åbne forhåndsvisning:', error);
             toast.error('Kunne ikke klargøre forhåndsvisningen.');
@@ -904,11 +906,27 @@ export default function AftalesedlerTab({ selectedCase, profile, carpenterProfil
                             {(!isMobile || previewTab === 'pdf') && (
                                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                                     {!isMobile && <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Aftaleseddel (PDF)</div>}
-                                    <iframe
-                                        title="Aftaleseddel PDF"
-                                        src={`${preview.pdfUrl}#view=FitH&navpanes=0`}
-                                        style={{ flex: 1, width: '100%', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: 'white' }}
-                                    />
+                                    {/* Pris/aftale-resumé — altid synligt (også hvis PDF-renderingen fejler). */}
+                                    {(() => {
+                                        const a = preview.agreement || {};
+                                        const isFast = a.priceType === 'fast_pris';
+                                        const hasFinal = a.final_amount != null && a.final_amount !== '';
+                                        const fmt = (n) => Number(n).toLocaleString('da-DK');
+                                        const priceText = isFast
+                                            ? `Fast pris: ${typeof a.amount === 'number' ? fmt(a.amount) : (a.amount || '—')} kr. inkl. moms`
+                                            : hasFinal
+                                                ? `Efter regning · Endelig pris: ${fmt(a.final_amount)} kr. inkl. moms`
+                                                : `Efter regning · Vejledende estimat: ${a.amount ? `${a.amount}` : '—'}`;
+                                        return (
+                                            <div style={{ marginBottom: '10px', padding: '12px 14px', background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '12px' }}>
+                                                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', marginBottom: '2px' }}>{a.title || 'Ekstraarbejde'}</div>
+                                                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#7c3aed' }}>{priceText}</div>
+                                            </div>
+                                        );
+                                    })()}
+                                    <div style={{ position: 'relative', flex: 1, minHeight: isMobile ? '360px' : '420px' }}>
+                                        <PdfCanvasPreview blob={preview.pdfBlob} openUrl={preview.pdfUrl} />
+                                    </div>
                                 </div>
                             )}
                             {(!isMobile || previewTab === 'mail') && (

@@ -37,6 +37,7 @@ import MobileQuickShare from './MobileQuickShare';
 import CreateLeadSelector from './CreateLeadSelector';
 import CreateCaseForm from './CreateCaseForm';
 import CustomerLibrary from './CustomerLibrary';
+import SupplierLibrary from './SupplierLibrary';
 import { getFeatures, getPlanFeatures, getModules, isTabEnabled } from '../../utils/features';
 import TimesheetTrialBanner from './TimesheetTrialBanner';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
@@ -709,6 +710,8 @@ const Dashboard = () => {
     const [activeTab, setActiveTab] = useState(() => {
         return localStorage.getItem('dashboard_active_tab') || 'overview';
     });
+    // Underfane på Kunder-siden: 'customers' | 'suppliers' (leverandør-bibliotek).
+    const [customersSubTab, setCustomersSubTab] = useState('customers');
 
     useEffect(() => {
         localStorage.setItem('dashboard_active_tab', activeTab);
@@ -3689,6 +3692,24 @@ const Dashboard = () => {
                         )
                     )}
                     {activeTab === 'customers' && (
+                    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                        {/* Fane-skift: Kunder | Leverandører */}
+                        <div style={{ display: 'inline-flex', gap: '4px', background: '#f1f5f9', padding: '4px', borderRadius: '14px', marginBottom: '20px' }}>
+                            {[{ k: 'customers', t: 'Kunder' }, { k: 'suppliers', t: 'Leverandører' }].map(o => {
+                                const on = customersSubTab === o.k;
+                                return (
+                                    <button key={o.k} onClick={() => setCustomersSubTab(o.k)}
+                                        style={{ padding: '9px 18px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.92rem', background: on ? '#fff' : 'transparent', color: on ? '#0f172a' : '#64748b', boxShadow: on ? '0 2px 6px rgba(15,23,42,0.10)' : 'none', transition: 'all 0.18s' }}
+                                        onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = '#0f172a'; }}
+                                        onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = '#64748b'; }}>
+                                        {o.t}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    {customersSubTab === 'suppliers' ? (
+                        <SupplierLibrary carpenter={carpenterProfile} isMobile={isMobile} />
+                    ) : (
                         <CustomerLibrary
                             carpenter={carpenterProfile}
                             myProfile={myProfile}
@@ -3725,6 +3746,8 @@ const Dashboard = () => {
                                 setIsCreateLeadModalOpen(true);
                             }}
                         />
+                    )}
+                    </div>
                     )}
 
                     {activeTab === 'leads' && (
