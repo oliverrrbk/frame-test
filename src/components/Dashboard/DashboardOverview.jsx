@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { getFeatures, isTabEnabled } from '../../utils/features';
 import { 
     Info, 
@@ -96,10 +97,28 @@ function CreateQuoteButton({ onClick, fullWidth = false, variant = 'solid' }) {
 // PRÆCISE beløb — så man altid kan se den reelle omsætning, ikke bare det afrundede.
 function KpiCard({ m, i, modules, goToTab }) {
     const [reveal, setReveal] = useState(false);
+    const [pos, setPos] = useState(null);
+    const cardRef = useRef(null);
     const isCurrency = m.format === 'currency';
     const clickable = !!(m.tab && isTabEnabled(m.tab, modules));
     const compact = isCurrency ? formatCompactDKK(m.value) : null;
     const exact = `${Math.round(Number(m.value) || 0).toLocaleString('da-DK')} kr.`;
+
+    // Placér exact-displayet via portal (fixed) ud fra kortets position, så det ALDRIG
+    // klippes af en scroll-/overflow-container ovenover (som en almindelig tooltip ellers gør).
+    useLayoutEffect(() => {
+        if (!reveal || !isCurrency) return;
+        const place = () => {
+            const r = cardRef.current?.getBoundingClientRect();
+            if (!r) return;
+            const openDown = r.top < 130; // ikke plads ovenover → vis under kortet
+            setPos({ left: Math.round(r.left + 20), top: Math.round(openDown ? r.bottom + 10 : r.top - 10), openDown });
+        };
+        place();
+        window.addEventListener('scroll', place, true);
+        window.addEventListener('resize', place);
+        return () => { window.removeEventListener('scroll', place, true); window.removeEventListener('resize', place); };
+    }, [reveal, isCurrency]);
 
     const handleClick = () => {
         if (clickable) { goToTab(m.tab); return; }
@@ -108,10 +127,11 @@ function KpiCard({ m, i, modules, goToTab }) {
 
     return (
         <div
+            ref={cardRef}
             className="glass-panel kpi-card"
             style={{
                 padding: '22px', display: 'flex', flexDirection: 'column', gap: '12px',
-                borderTop: `4px solid ${m.color}`, position: 'relative',
+                borderTop: `4px solid ${m.color}`, position: 'relative', overflow: 'hidden',
                 cursor: (clickable || isCurrency) ? 'pointer' : 'default',
                 animationDelay: `${i * 70}ms`,
             }}
@@ -119,10 +139,8 @@ function KpiCard({ m, i, modules, goToTab }) {
             onMouseEnter={() => { if (isCurrency) setReveal(true); }}
             onMouseLeave={() => { if (isCurrency) setReveal(false); }}
         >
-            {/* Baggrundsikon i egen clip-wrapper, så exact-displayet frit kan folde ud over kortet. */}
-            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 'inherit', pointerEvents: 'none' }}>
-                <m.icon className="kpi-bg-icon" size={120} style={{ position: 'absolute', right: '-20px', bottom: '-20px', color: m.color, opacity: 0.05 }} />
-            </div>
+            {/* Baggrundsikon (subtilt) */}
+            <m.icon className="kpi-bg-icon" size={120} style={{ position: 'absolute', right: '-20px', bottom: '-20px', color: m.color, opacity: 0.05 }} />
 
             <div className="kpi-label-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div className="kpi-chip" style={{ padding: '6px', borderRadius: '8px', background: `${m.color}15`, color: m.color, display: 'flex' }}>
@@ -138,26 +156,27 @@ function KpiCard({ m, i, modules, goToTab }) {
                 <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: '600', whiteSpace: 'nowrap' }}>{isCurrency ? compact.suffix : m.suffix}</span>
             </div>
 
-            {/* Bison exact-display — det reelle beløb, folder ud ved hover/tryk. */}
-            {isCurrency && (
+            {/* Bison exact-display — portaleret så det aldrig klippes. */}
+            {isCurrency && reveal && pos && createPortal(
                 <div
                     style={{
-                        position: 'absolute', left: '18px', bottom: 'calc(100% - 4px)', zIndex: 50,
-                        width: 'max-content', maxWidth: '260px',
-                        opacity: reveal ? 1 : 0,
-                        transform: reveal ? 'translateY(0)' : 'translateY(6px)',
-                        pointerEvents: 'none', transition: 'opacity .18s ease, transform .18s ease',
+                        position: 'fixed', left: pos.left, top: pos.top, zIndex: 100000,
+                        transform: pos.openDown ? 'none' : 'translateY(-100%)',
+                        width: 'max-content', maxWidth: '280px', pointerEvents: 'none',
+                        animation: 'fadeIn 0.15s ease-out',
                     }}
                 >
-                    <div style={{ background: 'rgba(15,23,42,0.97)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: '#fff', borderRadius: '14px', padding: '12px 16px', boxShadow: '0 18px 40px rgba(15,23,42,0.35)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ background: 'rgba(15,23,42,0.97)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: '#fff', borderRadius: '14px', padding: '12px 16px', boxShadow: '0 18px 44px rgba(15,23,42,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '3px' }}>
                             <m.icon size={13} style={{ color: m.color }} /> Faktisk {String(m.label).toLowerCase()}
                         </div>
-                        <div style={{ fontSize: '1.35rem', fontWeight: 800, letterSpacing: '-0.01em' }}>{exact}</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.01em' }}>{exact}</div>
                         <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>Bogført omsætning ekskl. moms</div>
                     </div>
-                    <div style={{ width: '12px', height: '12px', background: 'rgba(15,23,42,0.97)', position: 'absolute', left: '28px', bottom: '-5px', transform: 'rotate(45deg)', borderRight: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
-                </div>
+                    {/* Pil mod kortet */}
+                    <div style={{ width: '12px', height: '12px', background: 'rgba(15,23,42,0.97)', position: 'absolute', left: '22px', [pos.openDown ? 'top' : 'bottom']: '-5px', transform: 'rotate(45deg)', ...(pos.openDown ? { borderLeft: '1px solid rgba(255,255,255,0.08)', borderTop: '1px solid rgba(255,255,255,0.08)' } : { borderRight: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }) }} />
+                </div>,
+                document.body
             )}
         </div>
     );
