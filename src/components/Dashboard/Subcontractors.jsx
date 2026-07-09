@@ -4,6 +4,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, Phone, Mail, Pencil, Trash2, Plus, X, Loader2, Wrench, HardHat, ChevronDown, MapPin, CheckCircle, Send } from 'lucide-react';
+import PhoneInput from '../ui/PhoneInput';
 
 // Delt hjælper: send/opret gæste-login til en person på en konkret sag.
 // Bruges både af opret/redigér-modalen og af "Send gæste-login"-dialogen på kortet.
@@ -912,49 +913,10 @@ const iconBtn = {
 };
 
 
+// Bevaret navn for bagud-kompatibilitet — wrapper nu den fælles ui/PhoneInput
+// (dansk +45-standard + auto-formatering + udenlandsk-tilstand). Ét sted for al logik.
 export function BeautifulPhoneInput({ value, onChange, placeholder }) {
-    const [focused, setFocused] = useState(false);
-    return (
-        <div 
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                border: focused ? '1px solid #3b82f6' : '1px solid #e2e8f0',
-                borderRadius: '12px',
-                background: '#ffffff',
-                boxShadow: focused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-                transition: 'all 0.2s',
-                overflow: 'hidden'
-            }}
-        >
-            <div style={{ padding: '0 12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', borderRight: '1px solid #e2e8f0', background: '#f8fafc', height: '100%' }}>
-                <Phone size={14} />
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>+45</span>
-            </div>
-            <input
-                value={value}
-                onChange={(e) => {
-                    // Formatér som dansk nummer: 8 cifre i par (12 34 56 78).
-                    const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
-                    onChange(digits.match(/.{1,2}/g)?.join(' ') || '');
-                }}
-                inputMode="numeric"
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                placeholder={placeholder || '12 34 56 78'} 
-                style={{
-                    flex: 1,
-                    border: 'none',
-                    padding: '12px 14px',
-                    fontSize: '0.95rem',
-                    color: '#0f172a',
-                    outline: 'none',
-                    background: 'transparent',
-                    width: '100%'
-                }} 
-            />
-        </div>
-    );
+    return <PhoneInput value={value} onChange={onChange} placeholder={placeholder} />;
 }
 
 function CustomRoleSelect({ value, onChange }) {

@@ -4,6 +4,7 @@ import { User, Lock, Camera, Copy, CheckCircle, Phone, MessageSquare, Shield, Be
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import PushSubscriber from './PushSubscriber';
+import PhoneInput from '../ui/PhoneInput';
 import { getFeatures } from '../../utils/features';
 import { resetCoach } from './coachmarks';
 
@@ -363,12 +364,7 @@ const MyProfileView = ({ myProfile, setMyProfile }) => {
                                 />
                             </ProfileField>
                             <ProfileField label="Telefonnummer">
-                                <input
-                                    placeholder="Telefonnummer"
-                                    value={formData.phone}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))}
-                                    style={inputStyle} onFocus={onProfileFieldFocus} onBlur={onProfileFieldBlur}
-                                />
+                                <PhoneInput value={formData.phone} onChange={(v) => setFormData(prev => ({ ...prev, phone: v }))} />
                             </ProfileField>
                         </div>
                     </ProfileCard>

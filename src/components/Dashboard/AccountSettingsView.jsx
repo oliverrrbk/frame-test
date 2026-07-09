@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Mail, Building, User, MapPin, FileText, Phone, Link, Image as ImageIcon, MessageSquare, Briefcase, Camera, LayoutGrid, Globe, CreditCard, HardHat, ArrowRight } from 'lucide-react';
+import { Mail, Building, User, MapPin, FileText, Link, Image as ImageIcon, MessageSquare, Briefcase, Camera, LayoutGrid, Globe, CreditCard, HardHat, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PhoneInput from '../ui/PhoneInput';
 import SubscriptionSettings from './SubscriptionSettings';
 import DashboardModuleSettings from './DashboardModuleSettings';
 import { getPlan } from '../../utils/features';
@@ -140,9 +141,8 @@ const AccountSettingsView = ({
                                     <FileText size={20} color="#94a3b8" style={{ marginRight: '16px', flexShrink: 0 }}/>
                                     <input type="text" placeholder="CVR-nummer" value={carpenterProfile.cvr || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, cvr: e.target.value }))} style={{ border: 'none', outline: 'none', flex: 1, fontSize: '1rem', color: '#0f172a', padding: 0 }} />
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid #f1f5f9' }}>
-                                    <Phone size={20} color="#94a3b8" style={{ marginRight: '16px', flexShrink: 0 }}/>
-                                    <input type="text" placeholder="Telefonnummer" value={carpenterProfile.phone || ''} onChange={(e) => setCarpenterProfile(prev => ({ ...prev, phone: e.target.value }))} style={{ border: 'none', outline: 'none', flex: 1, fontSize: '1rem', color: '#0f172a', padding: 0 }} />
+                                <div style={{ padding: '16px', borderBottom: '1px solid #f1f5f9' }}>
+                                    <PhoneInput value={carpenterProfile.phone || ''} onChange={(v) => setCarpenterProfile(prev => ({ ...prev, phone: v }))} />
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', padding: '16px' }}>
                                     <Mail size={20} color="#94a3b8" style={{ marginRight: '16px', flexShrink: 0 }}/>

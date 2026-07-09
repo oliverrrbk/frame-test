@@ -6,6 +6,7 @@ import { friendlyError } from '../../utils/friendlyError';
 import { useVoiceDictation } from '../../hooks/useVoiceDictation';
 import WorkBreakdownModal, { totalManHours } from './WorkBreakdownModal';
 import CustomerPicker from '../ui/CustomerPicker';
+import PhoneInput from '../ui/PhoneInput';
 
 // Dansk telefon-formatering (+45 XX XX XX XX) — samme mønster som i QuickQuoteBuilder/wizarden.
 const formatDkPhone = (raw) => {
@@ -392,7 +393,7 @@ const CreateCaseForm = ({ carpenter, draftCreator, isMobile = false, onCancel, o
                         )}
                         <div>
                             <label style={labelStyle}>Telefon</label>
-                            <input style={inputStyle} value={customer.phone} onChange={(e) => setC({ phone: formatDkPhone(e.target.value) })} placeholder="+45 12 34 56 78" inputMode="tel" />
+                            <PhoneInput value={customer.phone} onChange={(v) => setC({ phone: v })} />
                         </div>
                         <div>
                             <label style={labelStyle}>Email</label>

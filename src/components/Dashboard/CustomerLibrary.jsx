@@ -14,6 +14,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { computeCaseFinance } from '../../utils/caseFinance';
 import { cacheGet, cacheSet } from '../../utils/dataCache';
+import PhoneInput from '../ui/PhoneInput';
 import {
     Search, Plus, User, Building2, Phone, Mail, MapPin, FileText, Briefcase,
     Wallet, Pencil, Trash2, X, ChevronRight, ChevronLeft, Users as UsersIcon,
@@ -589,7 +590,7 @@ function CustomerFormModal({ customer, companyId, createdBy, isMobile, onClose, 
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                         <div>
                             <label style={label}>Telefon</label>
-                            <input style={input} {...focusable} value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="12 34 56 78" />
+                            <PhoneInput value={form.phone} onChange={(v) => set('phone', v)} />
                         </div>
                         <div>
                             <label style={label}>E-mail</label>

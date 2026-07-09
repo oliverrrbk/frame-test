@@ -11,6 +11,7 @@ import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { cacheGet, cacheSet } from '../../utils/dataCache';
 import FileDropzone from '../ui/FileDropzone';
+import PhoneInput from '../ui/PhoneInput';
 import { Search, Plus, Truck, Phone, Mail, MapPin, User, Pencil, Trash2, X, Loader2 } from 'lucide-react';
 
 const norm = (s) => (s || '').trim().toLowerCase();
@@ -291,8 +292,7 @@ function SupplierFormModal({ supplier, carpenter, isMobile, onClose, onSaved, on
                         </div>
                         <div>
                             <label style={lbl}>Telefon</label>
-                            <input value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="Telefonnummer" style={field}
-                                onFocus={e => e.target.style.borderColor = '#3b82f6'} onBlur={e => e.target.style.borderColor = '#cbd5e1'} />
+                            <PhoneInput value={form.phone} onChange={(v) => set('phone', v)} />
                         </div>
                     </div>
                     <div>
