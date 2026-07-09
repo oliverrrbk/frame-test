@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Mail, Info, HelpCircle, X, ExternalLink, BookOpen, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Mail, Info, HelpCircle, X, ExternalLink, BookOpen, CheckCircle2, AlertTriangle, ShieldCheck, Copy } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import AudioPlayerButton from '../Wizard/AudioPlayerButton';
@@ -202,6 +202,48 @@ function ProviderSelect({ value, onChange }) {
     );
 }
 
+// Farve/labels pr. leverbarheds-status.
+const DELIV_STYLES = {
+    pass: { bg: '#f0fdf4', border: '#bbf7d0', color: '#166534', label: 'OK' },
+    warn: { bg: '#fffbeb', border: '#fde68a', color: '#92400e', label: 'Anbefales' },
+    fail: { bg: '#fef2f2', border: '#fecaca', color: '#b91c1c', label: 'Mangler' },
+    info: { bg: '#f8fafc', border: '#e2e8f0', color: '#475569', label: 'Info' },
+    unknown: { bg: '#f8fafc', border: '#e2e8f0', color: '#64748b', label: 'Ukendt' },
+};
+
+// Én række i leverbarheds-rapporten (SPF / DMARC / MX / DKIM).
+const DelivRow = ({ title, check }) => {
+    const [copied, setCopied] = useState(false);
+    const s = DELIV_STYLES[check?.status] || DELIV_STYLES.unknown;
+    const copy = () => {
+        try {
+            navigator.clipboard.writeText(check.suggestion);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1800);
+        } catch { /* ignorér — clipboard kan være blokeret */ }
+    };
+    return (
+        <div style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: '12px', padding: '12px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>{title}</span>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: s.color, background: '#fff', border: `1px solid ${s.border}`, padding: '3px 9px', borderRadius: '999px', whiteSpace: 'nowrap' }}>{s.label}</span>
+            </div>
+            <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: s.color, lineHeight: 1.5 }}>{check?.message}</p>
+            {check?.suggestion && (
+                <div style={{ marginTop: '10px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Indsæt denne DNS-record hos din udbyder:</div>
+                    <div style={{ display: 'flex', alignItems: 'stretch', gap: '6px' }}>
+                        <code style={{ flex: 1, minWidth: 0, overflowX: 'auto', whiteSpace: 'nowrap', background: '#0f172a', color: '#e2e8f0', padding: '8px 10px', borderRadius: '8px', fontSize: '0.78rem', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{check.suggestion}</code>
+                        <button type="button" onClick={copy} title="Kopiér" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#fff', border: `1px solid ${s.border}`, borderRadius: '8px', padding: '0 10px', cursor: 'pointer', color: '#334155', fontWeight: 700, fontSize: '0.75rem' }}>
+                            <Copy size={13} /> {copied ? 'Kopieret' : 'Kopiér'}
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedIntegration }) => {
     const isExpanded = expandedIntegration === 'smtp';
     const [settings, setSettings] = useState({
@@ -223,6 +265,8 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
     const [showHelpModal, setShowHelpModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
+    const [isCheckingDeliv, setIsCheckingDeliv] = useState(false);
+    const [delivResult, setDelivResult] = useState(null);   // { overall, checks } eller { error }
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -314,6 +358,34 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
             setTestResult({ success: false, message: error.message });
         } finally {
             setIsTesting(false);
+        }
+    };
+
+    const handleCheckDeliverability = async () => {
+        setIsCheckingDeliv(true);
+        setDelivResult(null);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Du er ikke logget ind.");
+
+            const response = await fetch('/api/check-deliverability', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    email: settings.smtp_from_email || settings.smtp_user,
+                    smtp_host: settings.smtp_host,
+                })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Tjekket fejlede');
+            setDelivResult(result);
+        } catch (error) {
+            setDelivResult({ error: error.message });
+        } finally {
+            setIsCheckingDeliv(false);
         }
     };
 
@@ -639,6 +711,60 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                             <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534' }}>
                                 <CheckCircle2 size={20} style={{ flexShrink: 0 }} />
                                 <span style={{ fontSize: '0.92rem', fontWeight: 700 }}>Din mail er sat op og klar{testResult?.success ? ' — testet og virker' : ''}.</span>
+                            </div>
+                        )}
+
+                        {/* --- LEVERBARHEDS-TJEK (SPF/DMARC) — undgå at tilbud ryger i spam --- */}
+                        {(settings.smtp_from_email || settings.smtp_user) && (
+                            <div style={{ marginTop: '8px', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px 18px', background: 'rgba(248,250,252,0.7)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <ShieldCheck size={20} />
+                                        </div>
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.95rem' }}>Tjek leverbarhed</div>
+                                            <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5 }}>Kontrollér at dit domænes DNS (SPF/DMARC) er sat op, så tilbud ikke ryger i spam.</div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleCheckDeliverability}
+                                        disabled={isCheckingDeliv}
+                                        style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '10px 16px', borderRadius: '10px', background: '#0f172a', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.85rem', cursor: isCheckingDeliv ? 'default' : 'pointer', opacity: isCheckingDeliv ? 0.7 : 1, transition: 'background 0.2s' }}
+                                        onMouseOver={(e) => { if (!isCheckingDeliv) e.currentTarget.style.background = '#1e293b'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = '#0f172a'; }}
+                                    >
+                                        <ShieldCheck size={16} /> {isCheckingDeliv ? 'Tjekker...' : 'Tjek nu'}
+                                    </button>
+                                </div>
+
+                                {delivResult?.error && (
+                                    <div style={{ marginTop: '14px', padding: '12px', borderRadius: '10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                        <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '2px' }} /> <div>{delivResult.error}</div>
+                                    </div>
+                                )}
+
+                                {delivResult?.checks && (() => {
+                                    const s = DELIV_STYLES[delivResult.overall] || DELIV_STYLES.unknown;
+                                    const banner = delivResult.overall === 'pass'
+                                        ? `${delivResult.domain}: alt ser godt ud — dine mails er sat op til at lande i indbakken.`
+                                        : delivResult.overall === 'fail'
+                                            ? `${delivResult.domain}: der mangler noget vigtigt (se herunder). Det er sandsynligvis derfor tilbud ryger i spam.`
+                                            : `${delivResult.domain}: virker, men kan gøres mere sikkert (se herunder).`;
+                                    return (
+                                        <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <div style={{ padding: '10px 14px', borderRadius: '10px', background: s.bg, border: `1px solid ${s.border}`, color: s.color, fontSize: '0.85rem', fontWeight: 700, lineHeight: 1.5 }}>{banner}</div>
+                                            <DelivRow title="SPF" check={delivResult.checks.spf} />
+                                            <DelivRow title="DMARC" check={delivResult.checks.dmarc} />
+                                            <DelivRow title="MX (mailserver)" check={delivResult.checks.mx} />
+                                            <DelivRow title="DKIM" check={delivResult.checks.dkim} />
+                                            <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#94a3b8', lineHeight: 1.5 }}>
+                                                DNS-records indsættes hos den udbyder, hvor dit domæne er registreret (fx One.com, Simply, DanDomain eller din webmaster). Efter ændringen kan der gå op til et par timer, før den slår igennem.
+                                            </p>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         )}
 

@@ -23,6 +23,35 @@ function guessImapHost(smtpHost) {
 }
 
 /**
+ * Laver en simpel ren-tekst-udgave af en HTML-mail.
+ * En mail UDEN text/plain-del vægter tungt negativt hos spamfiltre (Gmail/Outlook),
+ * så vi vedhæfter altid en tekstversion sammen med HTML'en (multipart/alternative).
+ */
+function htmlToText(html) {
+    if (!html || typeof html !== 'string') return '';
+    return html
+        // Links: "tekst (url)" så URL'en bevares i ren tekst
+        .replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, '$2 ($1)')
+        // Blok-elementer og linjeskift → newlines
+        .replace(/<(br|\/p|\/div|\/tr|\/li|\/h[1-6])\s*\/?>/gi, '\n')
+        .replace(/<\/?(p|div|tr|li|h[1-6]|table|thead|tbody|ul|ol)\b[^>]*>/gi, '\n')
+        // Resten af tags fjernes
+        .replace(/<[^>]+>/g, '')
+        // Almindelige HTML-entiteter
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;|&apos;/gi, "'")
+        // Ryd op i whitespace
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n[ \t]+/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
+/**
  * Bygger den rå RFC822-besked (MIME) fra mailOptions uden faktisk at sende.
  * Bruger Nodemailers streamTransport, så vi får præcis samme indhold som den
  * afsendte mail. newline: 'windows' giver CRLF, hvilket IMAP APPEND kræver.
@@ -246,6 +275,7 @@ export default async function handler(req, res) {
                 to: to,
                 subject: subject,
                 html: html,
+                text: htmlToText(html), // text/plain-del → bedre leverbarhed (undgå spam)
                 replyTo: replyTo || undefined,
             };
 
@@ -298,6 +328,7 @@ export default async function handler(req, res) {
                 to: [to],
                 subject: subject,
                 html: html,
+                text: htmlToText(html), // text/plain-del → bedre leverbarhed (undgå spam)
                 ...(replyTo && { reply_to: replyTo }),
                 ...(validAttachments && validAttachments.length > 0 && { attachments: validAttachments })
             })
