@@ -3,7 +3,12 @@ import { createPortal } from 'react-dom';
 import { Mail, Info, HelpCircle, X, ExternalLink, BookOpen, CheckCircle2, AlertTriangle, ShieldCheck, Copy } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import AudioPlayerButton from '../Wizard/AudioPlayerButton';
+import { sendEmail } from '../../utils/sendEmail';
+
+// Bisons support-mail — modtager gratis-hjælp-anmodninger til DNS/leverbarhed.
+const BISON_SUPPORT_EMAIL = 'mbc@bisoncompany.dk';
 
 // Hele SMTP-guiden som én naturlig oplæsnings-tekst (dansk TTS).
 // Bruges af "Læs op"-knappen i guide-modalen, så man kan lytte i stedet for at læse.
@@ -267,6 +272,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
     const [isCheckingDeliv, setIsCheckingDeliv] = useState(false);
     const [delivResult, setDelivResult] = useState(null);   // { overall, checks } eller { error }
+    const [helpState, setHelpState] = useState('idle');     // 'idle' | 'sending' | 'sent' | 'error'
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -364,6 +370,7 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
     const handleCheckDeliverability = async () => {
         setIsCheckingDeliv(true);
         setDelivResult(null);
+        setHelpState('idle');
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Du er ikke logget ind.");
@@ -386,6 +393,67 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
             setDelivResult({ error: error.message });
         } finally {
             setIsCheckingDeliv(false);
+        }
+    };
+
+    // Gratis-hjælp-anmodning: sender en opsummering af hvad der mangler (især DMARC) til
+    // Bison, så vi kan hjælpe tømreren med at sætte DNS-recordene op. Falder tilbage til
+    // mailto hvis afsendelsen fejler (fx SMTP-problem), så anmodningen aldrig går tabt.
+    const handleRequestDnsHelp = async () => {
+        if (!delivResult?.checks) return;
+        setHelpState('sending');
+
+        const firm = carpenterProfile?.company_name || carpenterProfile?.owner_name || 'Ukendt firma';
+        const ownerName = carpenterProfile?.owner_name || '';
+        const email = settings.smtp_from_email || settings.smtp_user || carpenterProfile?.email || '';
+        const phone = carpenterProfile?.phone || carpenterProfile?.owner_phone || '';
+        const domain = delivResult.domain || (email.split('@')[1] || '');
+
+        const rows = [
+            ['SPF', delivResult.checks.spf],
+            ['DMARC', delivResult.checks.dmarc],
+            ['MX', delivResult.checks.mx],
+            ['DKIM', delivResult.checks.dkim],
+        ];
+        const statusText = (c) => ({ pass: 'OK', warn: 'Anbefales', fail: 'Mangler', info: 'Info' }[c?.status] || 'Ukendt');
+
+        const rowsHtml = rows.map(([label, c]) => `
+            <tr>
+              <td style="padding:6px 10px;border-bottom:1px solid #eee;font-weight:700">${label}</td>
+              <td style="padding:6px 10px;border-bottom:1px solid #eee">${statusText(c)}</td>
+              <td style="padding:6px 10px;border-bottom:1px solid #eee">${(c?.suggestion || '—').replace(/</g, '&lt;')}</td>
+            </tr>`).join('');
+
+        const html = `
+          <div style="font-family:Arial,sans-serif;color:#0f172a">
+            <h2 style="margin:0 0 8px">Anmodning om gratis DNS/leverbarheds-hjælp</h2>
+            <p style="margin:0 0 12px">En Bison Frame-bruger vil gerne have hjælp til at sætte SPF/DMARC op, så tilbud ikke ender i spam.</p>
+            <p style="margin:0 0 4px"><b>Firma:</b> ${firm}${ownerName ? ` (${ownerName})` : ''}</p>
+            <p style="margin:0 0 4px"><b>Domæne:</b> ${domain || '—'}</p>
+            <p style="margin:0 0 4px"><b>E-mail:</b> ${email || '—'}</p>
+            <p style="margin:0 0 12px"><b>Telefon:</b> ${phone || '—'}</p>
+            <table style="border-collapse:collapse;width:100%;font-size:13px">
+              <thead><tr>
+                <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ddd">Record</th>
+                <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ddd">Status</th>
+                <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ddd">Foreslået DNS-record</th>
+              </tr></thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>`;
+
+        const subject = `Gratis DNS-hjælp ønskes — ${firm}${domain ? ` (${domain})` : ''}`;
+
+        try {
+            const res = await sendEmail({ to: BISON_SUPPORT_EMAIL, subject, html, replyTo: email || undefined });
+            if (!res?.success) throw new Error(res?.error || 'Kunne ikke sende');
+            setHelpState('sent');
+            toast.success('Tak! Vi kontakter dig og hjælper dig gratis i gang.');
+        } catch (_e) {
+            // Fallback: åbn brugerens mail-app med forudfyldt anmodning, så intet går tabt.
+            setHelpState('error');
+            const body = `Hej Bison\n\nJeg vil gerne have hjælp til at sætte min mail op, så tilbud ikke ender i spam.\n\nFirma: ${firm}\nDomæne: ${domain}\nE-mail: ${email}\nTelefon: ${phone}\n\n${rows.map(([l, c]) => `${l}: ${statusText(c)}${c?.suggestion ? ` — ${c.suggestion}` : ''}`).join('\n')}`;
+            window.location.href = `mailto:${BISON_SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         }
     };
 
@@ -759,6 +827,49 @@ const SmtpIntegration = ({ carpenterProfile, expandedIntegration, setExpandedInt
                                             <DelivRow title="DMARC" check={delivResult.checks.dmarc} />
                                             <DelivRow title="MX (mailserver)" check={delivResult.checks.mx} />
                                             <DelivRow title="DKIM" check={delivResult.checks.dkim} />
+
+                                            {/* Gratis-hjælp-CTA — vises kun når der ER noget at rette (warn/fail). */}
+                                            {delivResult.overall !== 'pass' && (
+                                                helpState === 'sent' ? (
+                                                    <div style={{ padding: '14px 16px', borderRadius: '14px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                                                        <CheckCircle2 size={20} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                                        <div style={{ fontSize: '0.88rem', lineHeight: 1.5 }}>
+                                                            <strong>Tak! Vi hjælper dig gratis i gang.</strong><br />
+                                                            Vi kontakter dig snarest{(settings.smtp_from_email || settings.smtp_user) ? ` på ${settings.smtp_from_email || settings.smtp_user}` : ''} og sætter det op sammen med dig, så dine tilbud lander i indbakken.
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ padding: '16px', borderRadius: '14px', background: 'linear-gradient(135deg,#eff6ff,#faf5ff)', border: '1px solid #bfdbfe' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }}>
+                                                            <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#fff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #dbeafe' }}>
+                                                                <ShieldCheck size={18} />
+                                                            </div>
+                                                            <div style={{ minWidth: 0 }}>
+                                                                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', marginBottom: '2px' }}>Skal vi hjælpe dig — helt gratis?</div>
+                                                                <div style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.55 }}>
+                                                                    Det ser tricky ud, men det er hurtigt fikset. Vi sætter det op for dig uden beregning, så alle dine tilbud lander i indbakken i stedet for spam.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleRequestDnsHelp}
+                                                            disabled={helpState === 'sending'}
+                                                            style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 16px', borderRadius: '12px', background: '#2563eb', color: '#fff', border: 'none', fontWeight: 800, fontSize: '0.9rem', cursor: helpState === 'sending' ? 'default' : 'pointer', opacity: helpState === 'sending' ? 0.7 : 1, boxShadow: '0 8px 20px rgba(37,99,235,0.25)', transition: 'transform 0.15s, box-shadow 0.2s, background 0.2s' }}
+                                                            onMouseOver={(e) => { if (helpState !== 'sending') { e.currentTarget.style.background = '#1d4ed8'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+                                                            onMouseOut={(e) => { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                                        >
+                                                            <Mail size={16} /> {helpState === 'sending' ? 'Sender…' : 'Ja tak — hjælp mig gratis'}
+                                                        </button>
+                                                        {helpState === 'error' && (
+                                                            <p style={{ margin: '8px 2px 0', fontSize: '12px', color: '#92400e', lineHeight: 1.5 }}>
+                                                                Vi åbnede din mail-app med anmodningen — send den, eller skriv til {BISON_SUPPORT_EMAIL}.
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )
+                                            )}
+
                                             <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#94a3b8', lineHeight: 1.5 }}>
                                                 DNS-records indsættes hos den udbyder, hvor dit domæne er registreret (fx One.com, Simply, DanDomain eller din webmaster). Efter ændringen kan der gå op til et par timer, før den slår igennem.
                                             </p>
