@@ -15,6 +15,7 @@ import SmtpIntegration from './SmtpIntegration';
 import WorkBreakdownModal, { totalManHours } from './WorkBreakdownModal';
 import { shouldShowCoach, markCoachSeen, skipAllCoach } from './coachmarks';
 import CustomerPicker from '../ui/CustomerPicker';
+import PdfCanvasPreview from './PdfCanvasPreview';
 
 // Første-gangs walkthrough af Hurtigt tilbud (kun desktop, kun én gang, altid spring-bar).
 const QUICKQUOTE_TOUR_STEPS = [
@@ -820,8 +821,6 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     }, []);
     // "Bærbar": rigtig desktop-layout, men ikke nok bredde til at PDF'en kan læses i 3-kolonne-visning.
     const isLaptop = !isMobile && vw < 1440;
-    // PDF-viewer uden mørk værktøjslinje + tilpas til bredden, så siden fylder rammen og kan læses.
-    const viewerSrc = (u) => u ? `${u}#toolbar=0&navpanes=0&statusbar=0&view=FitH` : u;
 
     // Ved redigering af en gemt kladde: indsæt det gemte rich-text-indhold i editoren
     // (contentEditable er ukontrolleret, så det skal sættes imperativt efter mount).
@@ -942,52 +941,13 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     };
 
     // ---- Preview af PDF + mail ----
-    // Dobbelt-buffer: to PDF-lag oven på hinanden. Den nye version loades usynligt i baggrunden
-    // og vises først når den er færdig — så brugeren aldrig ser den sorte "genindlæsnings"-flash.
-    const [slotUrls, setSlotUrls] = useState([null, null]);
-    const [front, setFront] = useState(0);
-    const frontRef = useRef(0);
-    const slotUrlsRef = useRef([null, null]);
-    const swapTimerRef = useRef(null);
-    useEffect(() => { frontRef.current = front; }, [front]);
-    useEffect(() => { slotUrlsRef.current = slotUrls; }, [slotUrls]);
-    const frontUrl = slotUrls[front];
-    // Er der nogensinde blevet vist en PDF inline? (iframens onLoad er fyret mindst én gang.)
-    // Bruges til at afgøre om vi skal vise et brugbart fallback-kort i stedet for et hvidt felt.
-    const [pdfRendered, setPdfRendered] = useState(false);
-    const [pdfGiveUp, setPdfGiveUp] = useState(false);
-    // Skift over til et lag (annullér samtidig den evt. ventende sikkerheds-timer).
-    const swapTo = (idx) => {
-        if (swapTimerRef.current) { clearTimeout(swapTimerRef.current); swapTimerRef.current = null; }
-        if (idx !== frontRef.current && slotUrlsRef.current[idx]) {
-            frontRef.current = idx;
-            setFront(idx);
-        }
-    };
-    // Når baggrunds-laget er færdig-loadet: markér at PDF'en faktisk kan vises, og skift over.
-    const onSlotLoaded = (idx) => { setPdfRendered(true); setPdfGiveUp(false); swapTo(idx); };
-    // Sidste sikkerhedsnet: har vi en PDF-URL men ingen inline-visning efter et par sekunder,
-    // så kan browseren (fx en in-app-browser / iOS-WebView) ikke vise PDF inline. Vis et
-    // brugbart fallback-kort med "Åbn PDF" i stedet for et permanent hvidt felt.
-    useEffect(() => {
-        if (!frontUrl || pdfRendered) { setPdfGiveUp(false); return; }
-        const g = setTimeout(() => setPdfGiveUp(true), 3000);
-        return () => clearTimeout(g);
-    }, [frontUrl, pdfRendered]);
-    // Fælles fallback-kort (bruges både på desktop og mobil).
-    const pdfFallbackCard = (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', textAlign: 'center', padding: '24px', background: '#f1f5f9', borderRadius: '14px' }}>
-            <FileText size={34} color="#94a3b8" />
-            <div style={{ color: '#475569', fontSize: '0.9rem', maxWidth: '300px', lineHeight: 1.5 }}>
-                Din browser kan ikke vise PDF'en her. Åbn den i en ny fane — tilbuddet er dannet og klar.
-            </div>
-            {frontUrl && (
-                <a href={frontUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '999px', background: '#0f172a', color: '#fff', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none' }}>
-                    <Maximize2 size={15} /> Åbn PDF i ny fane
-                </a>
-            )}
-        </div>
-    );
+    // PDF'en renderes til <canvas> med PDF.js (se PdfCanvasPreview), IKKE i en <iframe> med
+    // browserens indbyggede PDF-viewer. Safari viser meget upålideligt blob:-PDF'er i en iframe
+    // (ofte helt hvidt) — canvas-rendering ser ens ud i alle browsere. previewUrl bruges kun til
+    // "Åbn i nyt vindue" (en ny fane bruger browserens fulde viewer, som virker fint i Safari).
+    const [previewBlob, setPreviewBlob] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
+    const previewUrlRef = useRef(null);
     const dateStr = new Date().toLocaleDateString('da-DK');
 
     const emailHtml = useMemo(() => {
@@ -1006,25 +966,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             try {
                 const { blob } = await buildQuotePdf(buildQuoteObj(), carpenter, customerForPdf(), { title, dateStr });
                 if (cancelled) return;
+                // Ny blob til canvas-rendering. PdfCanvasPreview beholder den gamle side synlig
+                // indtil den nye er tegnet, så der er ingen hvid flash ved regenerering.
+                setPreviewBlob(blob);
+                // Frisk object-URL til "Åbn i nyt vindue"; frigiv den forrige.
                 const newUrl = URL.createObjectURL(blob);
-                // Er der overhovedet vist en PDF endnu? Hvis ikke, så skriv den direkte i FRONT-laget
-                // og vis den med det samme — så preview'et aldrig hænger permanent hvidt hvis iframens
-                // onLoad ikke fyrer (visse browsere/WebViews viser ikke PDF inline, eller fyrer upålideligt).
-                const firstEver = !slotUrlsRef.current[frontRef.current];
-                const target = firstEver ? frontRef.current : (1 - frontRef.current);
-                setSlotUrls(prev => {
-                    const next = [...prev];
-                    // Frigiv kun det lag vi overskriver (det skjulte, 2 generationer gamle) — aldrig det synlige.
-                    if (target !== frontRef.current && next[target]) URL.revokeObjectURL(next[target]);
-                    next[target] = newUrl;
-                    return next;
-                });
-                // Sikkerhedsnet: hvis baggrunds-lagets onLoad aldrig fyrer, så tving skiftet efter kort tid.
-                // En blob-PDF renderer normalt på få hundrede ms, så denne timer rammer kun når onLoad svigter.
-                if (!firstEver) {
-                    if (swapTimerRef.current) clearTimeout(swapTimerRef.current);
-                    swapTimerRef.current = setTimeout(() => { if (!cancelled) swapTo(target); }, 1500);
-                }
+                if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+                previewUrlRef.current = newUrl;
+                setPreviewUrl(newUrl);
             } catch { /* ignore preview-fejl */ }
             finally { if (!cancelled) setRegenerating(false); }
         }, 350);
@@ -1033,8 +982,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     }, [quoteSig]);
 
     useEffect(() => () => {
-        if (swapTimerRef.current) clearTimeout(swapTimerRef.current);
-        slotUrlsRef.current.forEach(u => u && URL.revokeObjectURL(u));
+        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     }, []);
 
     // ---- Auto-gem af en allerede gemt kladde ----
@@ -1877,17 +1825,9 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                         </div>
                     )}
                     <div style={{ flex: 1, minHeight: 0, width: '100%', maxWidth: pdfFocus ? '920px' : 'clamp(720px, 60vw, 1180px)', position: 'relative', borderRadius: '14px', background: '#fff', boxShadow: pdfFocus ? '0 24px 60px rgba(0,0,0,0.45)' : '0 10px 30px rgba(15,23,42,0.10)' }}>
-                        {[0, 1].map(i => slotUrls[i] ? (
-                            <iframe key={i} title={`Tilbud PDF ${i}`} src={viewerSrc(slotUrls[i])} onLoad={() => onSlotLoaded(i)}
-                                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: '1px solid #e2e8f0', borderRadius: '14px', background: '#fff', opacity: front === i ? 1 : 0, transition: 'opacity .18s ease', pointerEvents: (resizing || front !== i) ? 'none' : 'auto' }} />
-                        ) : null)}
-                        {!pdfRendered && (
-                            pdfGiveUp
-                                ? pdfFallbackCard
-                                : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>Genererer…</div>
-                        )}
+                        <PdfCanvasPreview blob={previewBlob} openUrl={previewUrl} />
                     </div>
-                    <a className="qqb-link" href={frontUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '12px', color: pdfFocus ? '#93c5fd' : '#3b82f6', fontWeight: 600, fontSize: '0.9rem', alignSelf: pdfFocus ? 'center' : 'flex-start' }}>Åbn i nyt vindue ▸</a>
+                    <a className="qqb-link" href={previewUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '12px', color: pdfFocus ? '#93c5fd' : '#3b82f6', fontWeight: 600, fontSize: '0.9rem', alignSelf: pdfFocus ? 'center' : 'flex-start' }}>Åbn i nyt vindue ▸</a>
                 </div>
             </div>
         );
@@ -2384,16 +2324,9 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                                             </div>
                                         )}
                                         <div style={{ position: 'relative', flex: 1, minHeight: 0, width: '100%', maxWidth: 760, borderRadius: 14, background: '#fff', boxShadow: '0 24px 60px rgba(0,0,0,0.45)', overflow: 'hidden' }}>
-                                            {frontUrl && (
-                                                <iframe title="Arbejdsbeskrivelse PDF" src={viewerSrc(frontUrl)} onLoad={() => { setPdfRendered(true); setPdfGiveUp(false); }} style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }} />
-                                            )}
-                                            {!pdfRendered && (
-                                                pdfGiveUp
-                                                    ? pdfFallbackCard
-                                                    : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>Genererer…</div>
-                                            )}
+                                            <PdfCanvasPreview blob={previewBlob} openUrl={previewUrl} />
                                         </div>
-                                        <a className="qqb-link" href={frontUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 12, color: '#93c5fd', fontWeight: 600, fontSize: '0.88rem' }}>Åbn i nyt vindue ▸</a>
+                                        <a className="qqb-link" href={previewUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 12, color: '#93c5fd', fontWeight: 600, fontSize: '0.88rem' }}>Åbn i nyt vindue ▸</a>
                                     </div>
                                 )}
                             </div>
