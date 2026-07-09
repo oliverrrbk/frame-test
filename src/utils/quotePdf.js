@@ -417,15 +417,6 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
         }
     }
 
-    // Estimeret varighed vises kun når der er angivet timer (timepris-tilbud).
-    if (laborHours > 0) {
-        const weeks = Math.max(1, Math.ceil(laborHours / 37));
-        const durText = `Estimeret varighed for udførelse: Ca. ${weeks} arbejdsuger. Den præcise opstartsdato aftales nærmere, når tilbuddet er bekræftet.`;
-        const durLines = pdf.splitTextToSize(durText, right - left);
-        pdf.text(durLines, left, y);
-        y += durLines.length * 5 + 1;
-    }
-
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8);
     pdf.setTextColor(...muted);
