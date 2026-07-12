@@ -788,7 +788,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         address: [customer.address, [customer.zip, customer.city].filter(Boolean).join(' ')].filter(Boolean).join(', ').trim(),
     });
     // Davidsen-PDF (nyligt valgt fil, endnu ikke uploadet)
-    const [materialFile, setMaterialFile] = useState(null);
+    const [materialFiles, setMaterialFiles] = useState([]); // flere materiale-PDF'er kan vedhæftes ad gangen
     // Allerede gemte materiale-PDF'er (fx fra Stark/Bygma) — vises så de kan fjernes igen.
     const [savedPdfs, setSavedPdfs] = useState(initialLead?.raw_data?.material_pdfs || []);
     // PDF der afventer bekræftelse på fjernelse ({...pdf} for gemt, {transient:true} for den valgte fil).
@@ -1121,15 +1121,18 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 if (latest?.raw_data) baseRaw = latest.raw_data;
             }
 
-            // 1) Upload Davidsen-PDF (hvis vedhæftet)
+            // 1) Upload materiale-PDF'er (kan være flere) — hver får et unikt filnavn,
+            // så de ikke overskriver hinanden i storage.
             const materialPdfs = [];
-            if (materialFile) {
-                const ext = materialFile.name.split('.').pop() || 'pdf';
-                const fn = `manual_${quoteToken}_materialer.${ext}`;
-                const { error: upErr } = await supabase.storage.from('uploads').upload(fn, materialFile, { upsert: true, cacheControl: '0' });
+            for (let i = 0; i < materialFiles.length; i++) {
+                const file = materialFiles[i];
+                const ext = file.name.split('.').pop() || 'pdf';
+                const fn = `manual_${quoteToken}_mat_${uid()}.${ext}`;
+                const { error: upErr } = await supabase.storage.from('uploads').upload(fn, file, { upsert: true, cacheControl: '0' });
                 if (upErr) throw new Error('Upload af materiale-PDF fejlede: ' + upErr.message);
                 const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fn);
-                materialPdfs.push({ id: uid(), name: materialFile.name, url: publicUrl, amount: calc.mCost, date: new Date().toISOString() });
+                // amount kun på den første (uændret adfærd for enkelt-fil); feltet vises ikke som sum.
+                materialPdfs.push({ id: uid(), name: file.name, url: publicUrl, amount: i === 0 ? calc.mCost : 0, date: new Date().toISOString() });
             }
 
             // 2) Generér tilbuds-PDF og upload
@@ -1215,6 +1218,13 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 ({ data: lead, error } = await supabase.from('leads').insert([fields]).select().single());
             }
             if (error) throw error;
+
+            // De netop uploadede PDF'er er nu gemt → vis dem som "gemte" og ryd de ventende,
+            // så visningen er korrekt hvis editoren forbliver åben (fx materialeliste-flowet).
+            if (materialPdfs.length) {
+                setSavedPdfs(prev => [...prev, ...materialPdfs]);
+                setMaterialFiles([]);
+            }
 
             // 4) Send mail til kunden
             if (sendToCustomer && customer.email) {
@@ -1336,7 +1346,6 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         const target = pdfToRemove;
         if (!target) return;
         setPdfToRemove(null);
-        if (target.transient) { setMaterialFile(null); toast.success('PDF fjernet'); return; }
         const next = savedPdfs.filter(p => p.id !== target.id);
         setSavedPdfs(next);
         if (initialLead?.id) {
@@ -1369,19 +1378,25 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     ))}
                 </div>
             )}
-            {materialFile ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
-                    <FileText size={18} color="#16a34a" />
-                    <span style={{ flex: 1, fontSize: '0.9rem', color: '#166534', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{materialFile.name}</span>
-                    <button onClick={() => setPdfToRemove({ transient: true, name: materialFile.name })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><Trash2 size={16} /></button>
+            {/* Netop vedhæftede (endnu ikke gemte) PDF'er — kan fjernes igen inden man gemmer. */}
+            {materialFiles.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
+                    {materialFiles.map((f, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
+                            <FileText size={18} color="#16a34a" style={{ flexShrink: 0 }} />
+                            <span style={{ flex: 1, fontSize: '0.9rem', color: '#166534', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                            <button onClick={() => setMaterialFiles(prev => prev.filter((_, idx) => idx !== i))} title="Fjern" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><Trash2 size={16} /></button>
+                        </div>
+                    ))}
                 </div>
-            ) : (
-                <FileDropzone
-                    accept="application/pdf,image/*"
-                    onFiles={(files) => setMaterialFile(files[0] || null)}
-                    title="Træk PDF hertil eller klik for at vedhæfte"
-                />
             )}
+            {/* Dropzonen bliver stående, så man kan vedhæfte FLERE materialelister. */}
+            <FileDropzone
+                accept="application/pdf,image/*"
+                multiple
+                onFiles={(files) => setMaterialFiles(prev => [...prev, ...files])}
+                title={(materialFiles.length || savedPdfs.length) ? 'Tilføj flere PDF\'er' : 'Træk PDF hertil eller klik for at vedhæfte'}
+            />
         </>
     );
 
