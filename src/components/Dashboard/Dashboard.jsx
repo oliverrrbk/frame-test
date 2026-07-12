@@ -750,6 +750,11 @@ const Dashboard = () => {
     const [materialsData, setMaterialsData] = useState([]);
     const [disabledCategories, setDisabledCategories] = useState([]);
     const [leadsData, setLeadsData] = useState([]);
+    // Sager hvor JEG er underleverandør/gæst hos ET ANDET firma (bevaret efter en
+    // gæste→mester-konvertering). Hentes maskeret via get_my_external_leads(), så
+    // den inviterende mesters økonomi aldrig er synlig. Tom hvis RPC ikke er
+    // deployet endnu, eller hvis man ingen eksterne medlemskaber har.
+    const [externalLeads, setExternalLeads] = useState([]);
     const [geocodedLeads, setGeocodedLeads] = useState({});
     // Standard-fane i Kunder & leads: dine egne tilbudskladder vises først.
     const [leadFilter, setLeadFilter] = useState('Tilbudskladder');
@@ -896,6 +901,22 @@ const Dashboard = () => {
     // Global ulæst-tæller til chat (vises som badge i menuen, à la Messenger).
     const [chatUnreadCount, setChatUnreadCount] = useState(0);
     const chatUnreadRefreshRef = useRef(null);
+
+    // Hent MASKEREDE eksterne sager (hvor jeg er underleverandør hos et andet firma).
+    // Fail-safe: hvis RPC'en ikke er deployet endnu, eller man ingen medlemskaber har,
+    // forbliver listen tom → ingen "Underleverandør"-fane vises. Gæster bruger
+    // GuestDashboard og rammer aldrig dette.
+    useEffect(() => {
+        if (!myProfile?.id || myProfile.role === 'guest') { setExternalLeads([]); return; }
+        let cancelled = false;
+        (async () => {
+            try {
+                const { data } = await supabase.rpc('get_my_external_leads');
+                if (!cancelled) setExternalLeads(Array.isArray(data) ? data.filter(l => l.status !== 'Slettet') : []);
+            } catch { /* RPC findes måske ikke endnu — ignorér stille */ }
+        })();
+        return () => { cancelled = true; };
+    }, [myProfile?.id, myProfile?.role]);
     useEffect(() => {
         const uid = myProfile?.id;
         if (!uid) return;
@@ -3665,8 +3686,9 @@ const Dashboard = () => {
                             <CaseManagement 
                                 targetCaseId={targetCaseId}
                                 clearTargetCase={() => setTargetCaseId(null)}
-                                leads={leadsData} 
-                                profile={{ ...myProfile, role: effectiveRole, company_id: carpenterProfile?.company_id || carpenterProfile?.id }} 
+                                leads={leadsData}
+                                externalLeads={externalLeads}
+                                profile={{ ...myProfile, role: effectiveRole, company_id: carpenterProfile?.company_id || carpenterProfile?.id }}
                                 carpenterProfile={carpenterProfile}
                                 setCarpenterProfile={setCarpenterProfile}
                                 simulatedRole={simulatedRole}
@@ -6543,7 +6565,8 @@ const Dashboard = () => {
                                     draftCreator={myProfile}
                                     isMobile={isMobile}
                                     initialLead={quotePrefill}
-                                    onOpenMaterialList={() => openMaterialBuilder(null)}
+                                    onOpenMaterialList={(lead) => openMaterialBuilder(lead)}
+                                    onDraftSaved={(lead) => setQuotePrefill(lead)}
                                     onCancel={() => {
                                         setIsCreateLeadModalOpen(false);
                                         setCreateLeadMode(null);
@@ -6640,7 +6663,8 @@ const Dashboard = () => {
                                 draftCreator={myProfile}
                                 isMobile={isMobile}
                                 initialLead={editQuoteLead}
-                                onOpenMaterialList={() => openMaterialBuilder(editQuoteLead)}
+                                onOpenMaterialList={(lead) => openMaterialBuilder(lead || editQuoteLead)}
+                                onDraftSaved={(lead) => setEditQuoteLead(lead)}
                                 onCancel={() => setEditQuoteLead(null)}
                                 onDeleted={async () => {
                                     setEditQuoteLead(null);

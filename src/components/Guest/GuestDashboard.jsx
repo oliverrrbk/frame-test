@@ -340,15 +340,15 @@ export default function GuestDashboard({ myProfile }) {
                 .gd-btn:active { transform: scale(.97); }
             `}</style>
 
-            {/* Top bar */}
-            <div style={{ position: 'sticky', top: 0, zIndex: 50, padding: 'max(14px, env(safe-area-inset-top)) 18px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', ...GLASS, borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none' }}>
+            {/* Top bar — hamburger i venstre kant (som resten af Bison Frame på mobil) */}
+            <div style={{ position: 'sticky', top: 0, zIndex: 50, padding: 'max(14px, env(safe-area-inset-top)) 18px 14px', display: 'flex', alignItems: 'center', gap: '12px', ...GLASS, borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none' }}>
+                <button onClick={() => setShowMenu(true)} className="gd-btn" style={{ width: 42, height: 42, borderRadius: '14px', background: 'rgba(255,255,255,0.8)', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                    <Menu size={20} color={T.textPrimary} />
+                </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <img src="/logo.png" alt="Bison Frame" style={{ height: 26, width: 'auto' }} onError={(e) => { e.target.style.display = 'none'; }} />
                     <span style={{ fontWeight: 800, color: T.textPrimary, letterSpacing: '-0.02em' }}>Bison Frame</span>
                 </div>
-                <button onClick={() => setShowMenu(true)} className="gd-btn" style={{ width: 42, height: 42, borderRadius: '14px', background: 'rgba(255,255,255,0.8)', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                    <Menu size={20} color={T.textPrimary} />
-                </button>
             </div>
 
             {/* Content */}
@@ -659,7 +659,7 @@ function NudgeModal({ profile, onClose }) {
                     </button>
                 }
             >
-                <p style={{ margin: '0 0 18px', color: T.textSecondary, lineHeight: 1.6 }}>Du beholder adgangen til dine nuværende sager — og får din egen Bison Frame oveni. <strong style={{ color: T.textPrimary }}>Intet kort, ingen binding.</strong></p>
+                <p style={{ margin: '0 0 18px', color: T.textSecondary, lineHeight: 1.6 }}>Du bruger <strong style={{ color: T.textPrimary }}>samme login</strong> (din e-mail) — udfyld bare dine firma-oplysninger. Du beholder adgangen til dine nuværende sager og får din egen Bison Frame oveni. <strong style={{ color: T.textPrimary }}>Intet kort, ingen binding.</strong></p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div><label style={guestLabel}>Firmanavn *</label><input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Dit Firma ApS" style={guestField} /></div>
                     <div><label style={guestLabel}>CVR (valgfri)</label><input value={cvr} onChange={e => setCvr(e.target.value)} placeholder="12345678" style={guestField} /></div>

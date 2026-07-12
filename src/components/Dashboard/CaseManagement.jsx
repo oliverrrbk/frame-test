@@ -644,7 +644,7 @@ const CASES_TOUR_STEPS = [
     { sel: '[data-tour="case-tab-drawings"]', placement: 'bottom', eyebrow: 'Fane 7', title: 'Tegninger', body: 'Hav tegninger og plantegninger lige ved hånden — knyttet direkte til sagen.' },
 ];
 
-export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile, onCreateQuote, onCreateCase, onOpenMaterialBuilder }) {
+export default function CaseManagement({ targetCaseId, clearTargetCase, leads = [], externalLeads = [], profile, simulatedRole, syncToAccounting, onOpenInvoice, onOpenChat, onUpdateLead, isModalView = false, selectedLeadId = null, carpenterProfile, setCarpenterProfile, onCreateQuote, onCreateCase, onOpenMaterialBuilder }) {
     const [activeCases, setActiveCases] = useState([]);
     // Rundtur: aktiv ved første besøg (desktop, ikke i modal-visning).
     const [casesTourActive, setCasesTourActive] = useState(() => !isModalView && shouldShowCoach('cases_tour'));
@@ -2271,7 +2271,14 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
     };
     const ACTIVE_STATUSES = ['Bekræftet opgave', 'Sæt i bero'];
     const myCasesCount = activeCases.filter(isMyCase).length;
-    const baseCaseList = caseViewTab === 'mine' ? activeCases.filter(isMyCase) : activeCases;
+    // Sager hvor JEG er underleverandør hos et andet firma (maskeret, hentet separat).
+    const externalCases = (externalLeads || []).filter(isConfirmedCase);
+    const externalCount = externalCases.length;
+    const baseCaseList = caseViewTab === 'external'
+        ? externalCases
+        : caseViewTab === 'mine'
+            ? activeCases.filter(isMyCase)
+            : activeCases;
     const searchedCases = baseCaseList.filter(matchesCaseSearch);
     const aktiveSager = searchedCases.filter(c => ACTIVE_STATUSES.includes(c.status));
     const afsluttedeSager = searchedCases.filter(c => !ACTIVE_STATUSES.includes(c.status));
@@ -2623,6 +2630,12 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                 <button onClick={() => setCaseViewTab('all')} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem', background: caseViewTab === 'all' ? '#ffffff' : 'transparent', color: caseViewTab === 'all' ? '#0f172a' : '#64748b', boxShadow: caseViewTab === 'all' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
                                     Alle sager ({activeCases.length})
                                 </button>
+                                {/* Vises kun hvis jeg er underleverandør på en anden mesters sag(er) */}
+                                {externalCount > 0 && (
+                                    <button onClick={() => setCaseViewTab('external')} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem', background: caseViewTab === 'external' ? '#ffffff' : 'transparent', color: caseViewTab === 'external' ? '#7c3aed' : '#64748b', boxShadow: caseViewTab === 'external' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
+                                        Underleverandør ({externalCount})
+                                    </button>
+                                )}
                             </div>
                             <div data-tour="cases-search" style={{ position: 'relative', flex: isMobile ? '1 1 100%' : '1 1 280px', maxWidth: isMobile ? 'none' : '420px' }}>
                                 <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
@@ -2636,7 +2649,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             </div>
                         </div>
 
-                        {activeCases.length === 0 ? (
+                        {(caseViewTab !== 'external' && activeCases.length === 0) ? (
                             <div style={{ padding: '64px', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', color: '#6b7280' }}>
                                 <HardHat size={48} style={{ margin: '0 auto 16px', opacity: 0.2 }} />
                                 <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>Ingen bekræftede sager endnu</p>
@@ -2662,6 +2675,20 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             <div style={{ padding: '48px', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e8e6e1', color: '#6b7280' }}>
                                 <Search size={40} style={{ margin: '0 auto 12px', opacity: 0.2 }} />
                                 <p style={{ margin: 0, fontSize: '0.875rem' }}>Ingen sager matcher din søgning{caseSearch.trim() ? ` "${caseSearch.trim()}"` : ''}.</p>
+                            </div>
+                        ) : caseViewTab === 'external' ? (
+                            /* UNDERLEVERANDØR — sager hos andre firmaer (maskeret økonomi) */
+                            <div>
+                                <h4 style={{ margin: '0 0 6px 0', fontSize: '0.95rem', fontWeight: 'bold', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#7c3aed' }} />
+                                    Underleverandør — hos andre ({searchedCases.length})
+                                </h4>
+                                <p style={{ margin: '0 0 16px 0', fontSize: '0.82rem', color: '#94a3b8' }}>
+                                    Sager hvor du er koblet på som underleverandør. Økonomi og priser er skjult — du kan se projektet og registrere dine egne timer.
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(360px, 1fr))', gap: isMobile ? '12px' : '20px' }}>
+                                    {searchedCases.map(renderCaseCard)}
+                                </div>
                             </div>
                         ) : (
                             <>
