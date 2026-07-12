@@ -999,15 +999,20 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             const quoteObj = buildQuoteObj();
             const fullAddress = [customer.address, [customer.zip, customer.city].filter(Boolean).join(' ')]
                 .filter(Boolean).join(', ').trim();
+            // Hent den NYESTE raw_data først, så auto-gem ikke overskriver felter der er gemt
+            // udenom tilbuds-editoren — fx materialelisten fra MaterialListBuilder. Uden dette
+            // klobrede auto-gem (særligt flush ved luk) den netop gemte materialeliste væk.
+            const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', initialLead.id).single();
+            const baseRaw = latest?.raw_data || initialLead?.raw_data || {};
             const raw_data = {
-                ...(initialLead?.raw_data || {}),
+                ...baseRaw,
                 is_manual_quote: true,
                 manual_quote: quoteObj,
-                quote_settings: { ...(initialLead?.raw_data?.quote_settings || {}), validityDays: num(validityDays) || 14 },
+                quote_settings: { ...(baseRaw.quote_settings || {}), validityDays: num(validityDays) || 14 },
                 custom_message: emailMessage,
                 calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: effLaborHours, hourlyRate: num(laborRate) },
                 actual_quote_price: calc.totalExVat,
-                customerDetails: { ...(initialLead?.raw_data?.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city, customerType, cvr: customerType === 'erhverv' ? cvr : '' },
+                customerDetails: { ...(baseRaw.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city, customerType, cvr: customerType === 'erhverv' ? cvr : '' },
             };
             const { error } = await supabase.from('leads').update({
                 customer_name: customer.name,
@@ -1106,6 +1111,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         try {
             const quoteObj = buildQuoteObj();
 
+            // Hent NYESTE raw_data ved redigering, så vi ikke overskriver felter gemt udenom
+            // editoren (fx materialeliste fra MaterialListBuilder). En ny kladde har intet at hente.
+            let baseRaw = initialLead?.raw_data || {};
+            if (isEditing && initialLead?.id) {
+                const { data: latest } = await supabase.from('leads').select('raw_data').eq('id', initialLead.id).single();
+                if (latest?.raw_data) baseRaw = latest.raw_data;
+            }
+
             // 1) Upload Davidsen-PDF (hvis vedhæftet)
             const materialPdfs = [];
             if (materialFile) {
@@ -1139,7 +1152,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             // Når tilbuddet (gen)sendes: stempl afsendelsestidspunkt (gyldigheden løber herfra)
             // og ryd evt. tidligere forlængelse (validUntil), så gyldigheden er ren igen.
             const isSendingNow = (sendToCustomer || wasSent);
-            const nextQuoteSettings = { ...(initialLead?.raw_data?.quote_settings || {}), validityDays: num(validityDays) || 14 };
+            const nextQuoteSettings = { ...(baseRaw.quote_settings || {}), validityDays: num(validityDays) || 14 };
             if (isSendingNow) delete nextQuoteSettings.validUntil;
 
             // Hvem lavede tilbuddet (avatar-attribution). En MEDARBEJDER tilføjes til
@@ -1147,11 +1160,11 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             // Mester ser den altid via carpenter_id, så ejeren tilføjes ikke (overflødigt).
             const ownerId = carpenter?.company_id || carpenter?.id;
             const isEmployeeCreator = !!draftCreator?.id && draftCreator.id !== ownerId;
-            const existingAssigned = initialLead?.raw_data?.assigned_workers || [];
+            const existingAssigned = baseRaw.assigned_workers || [];
 
             const raw_data = {
-                ...(initialLead?.raw_data || {}),
-                created_by: initialLead?.raw_data?.created_by || draftCreator?.id || null,
+                ...baseRaw,
+                created_by: baseRaw.created_by || draftCreator?.id || null,
                 ...(isEmployeeCreator && !existingAssigned.includes(draftCreator.id)
                     ? { assigned_workers: [...existingAssigned, draftCreator.id] }
                     : {}),
@@ -1163,14 +1176,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: effLaborHours, hourlyRate: num(laborRate) },
                 actual_quote_price: calc.totalExVat,
                 // Strukturerede kundefelter bevares så de kan genindlæses korrekt ved redigering.
-                customerDetails: { ...(initialLead?.raw_data?.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city, customerType, cvr: customerType === 'erhverv' ? cvr : '' },
-                quote_pdf_url: quotePdfUrl ? `${quotePdfUrl}?t=${Date.now()}` : (initialLead?.raw_data?.quote_pdf_url),
+                customerDetails: { ...(baseRaw.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city, customerType, cvr: customerType === 'erhverv' ? cvr : '' },
+                quote_pdf_url: quotePdfUrl ? `${quotePdfUrl}?t=${Date.now()}` : (baseRaw.quote_pdf_url),
                 material_pdfs: [...savedPdfs, ...materialPdfs],
                 // Har brugeren lavet delopgaver, bliver DE til bygge-to-do'en. Ellers
                 // bevares en eksisterende liste, og sidste udvej er standard-skabelonen.
                 checklist: (Array.isArray(breakdown) && breakdown.some(s => (s.subTasks || []).length))
                     ? breakdown
-                    : (initialLead?.raw_data?.checklist || seedChecklist(quoteObj.workLines)),
+                    : (baseRaw.checklist || seedChecklist(quoteObj.workLines)),
             };
 
             // Kobl tilbuddet til en kunde i biblioteket: valgt kunde, eksisterende kobling,
