@@ -381,7 +381,7 @@ const PREVIEW_CSS = `
   .qqb-rec{animation:qqbrec 1s ease-in-out infinite;}
 `;
 
-export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null, draftCreator = null, onOpenMaterialList = null }) {
+export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null, draftCreator = null, onOpenMaterialList = null, onDraftSaved = null }) {
     const [busy, setBusy] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     // Valgfri: send kunden en kort besked om at tilbuddet er trukket tilbage (kun ved sendte tilbud).
@@ -1092,7 +1092,9 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     };
 
     // ---- Gem (kladde eller send) ----
-    const save = async (sendToCustomer) => {
+    // opts.keepOpen: gem som kladde UDEN at lukke editoren (bruges før materialelisten
+    // bygges, så listen kan hæftes på det gemte tilbud). Returnerer den gemte lead.
+    const save = async (sendToCustomer, opts = {}) => {
         if (!customer.name.trim()) {
             // Markér feltet rødt (som ved afsendelse) i stedet for kun en toast.
             setFieldErrors(prev => ({ ...prev, name: true }));
@@ -1231,14 +1233,32 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
 
             // Tilbuddet er nu gemt rigtigt i databasen → ryd den midlertidige auto-kladde.
             clearWorkingDraft();
-            toast.success(sendToCustomer ? (wasSent ? 'Opdateret tilbud sendt til kunden! 🎉' : 'Tilbuddet er sendt til kunden! 🎉') : 'Kladden er gemt.');
-            onComplete && onComplete(lead);
+            if (opts.keepOpen) {
+                // Gemt som kladde, men editoren forbliver åben. Forfrem tilbuddet til en
+                // gemt kladde hos forælderen, så videre auto-gem/gem rammer SAMME lead
+                // (ellers ville næste gem oprette en dublet, løsrevet fra materialelisten).
+                onDraftSaved && onDraftSaved(lead);
+                toast.success('Tilbuddet er gemt som kladde.');
+            } else {
+                toast.success(sendToCustomer ? (wasSent ? 'Opdateret tilbud sendt til kunden! 🎉' : 'Tilbuddet er sendt til kunden! 🎉') : 'Kladden er gemt.');
+                onComplete && onComplete(lead);
+            }
+            return lead;
         } catch (e) {
             console.error('Kunne ikke gemme/sende tilbud:', e);
             toast.error(friendlyError(e, 'Kunne ikke gemme tilbuddet. Prøv igen.'));
         } finally {
             setBusy(false);
         }
+    };
+
+    // "Generér materialeliste til leverandør": listen skal hæftes på tilbuddet.
+    // Er tilbuddet ikke gemt endnu, gemmer vi det som kladde FØRST og hæfter så listen på.
+    const handleOpenMaterialList = async () => {
+        if (!onOpenMaterialList) return;
+        if (initialLead?.id) { onOpenMaterialList(initialLead); return; }
+        const lead = await save(false, { keepOpen: true });
+        if (lead?.id) onOpenMaterialList(lead);
     };
 
     // ---- Slet tilbuddet helt (soft-delete via RPC — kun ved redigering af eksisterende) ----
@@ -1771,7 +1791,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     {renderMaterialInputs()}
                     {renderUploadField()}
                     {onOpenMaterialList && (
-                        <button type="button" onClick={() => onOpenMaterialList()}
+                        <button type="button" onClick={handleOpenMaterialList}
                             style={{ marginTop: '14px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 16px', borderRadius: '12px', border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}>
                             <Package size={16} /> Generér materialeliste til leverandør
                         </button>
