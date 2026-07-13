@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale';
@@ -131,6 +131,28 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
     const [showEventModal, setShowEventModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [popoverLead, setPopoverLead] = useState(null);
+    // Sag-popoverens målte position — klemmes ind på skærmen så den aldrig klippes
+    // i bunden (åbner opad hvis der ikke er plads nedad). Sættes i useLayoutEffect.
+    const popoverRef = useRef(null);
+    const [popoverPos, setPopoverPos] = useState(null);
+    // Klem sag-popoveren ind på skærmen: åbn nedad hvis der er plads, ellers opad
+    // (så den ALDRIG klippes i bunden), og hold den inden for venstre/højre kant.
+    // Måler boksens faktiske højde efter mount → virker uanset antal knapper.
+    useLayoutEffect(() => {
+        if (!popoverLead || !popoverRef.current) return;
+        const r = popoverRef.current.getBoundingClientRect();
+        const m = 12;
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let left = popoverLead.x;
+        if (left + r.width > vw - m) left = vw - m - r.width;
+        if (left < m) left = m;
+        let top = popoverLead.yBottom + 6;                 // som udgangspunkt under chippen
+        if (top + r.height > vh - m) {                     // ikke plads nedad → åbn opad
+            const up = popoverLead.yTop - r.height - 6;
+            top = up >= m ? up : Math.max(m, vh - m - r.height);
+        }
+        setPopoverPos({ left, top });
+    }, [popoverLead]);
     // Vælg-ekstra-dage-tilstand: sagen der får ekstra dage ved klik på kalenderdage (desktop).
     const [addDayLead, setAddDayLead] = useState(null);
     // Mobil: bottom-sheet til at tilføje/fjerne ekstra dage med datovælger.
@@ -1786,9 +1808,10 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
                                                     e.stopPropagation();
                                                     if (addDayLead) { handleExtraDayClick(checkDate); return; }
                                                     const rect = e.currentTarget.getBoundingClientRect();
-                                                    setPopoverLead({ lead, x: rect.left, y: rect.top, dateStr: cellDateStr });
+                                                    setPopoverPos(null); // nulstil så positionen måles på ny
+                                                    setPopoverLead({ lead, x: rect.left, yTop: rect.top, yBottom: rect.bottom, dateStr: cellDateStr });
                                                 }}
-                                                onMouseEnter={(evt) => { const rect = evt.currentTarget.getBoundingClientRect(); setHoverTooltip({ x: rect.left + rect.width/2, y: rect.top, content: `Sag: ${lead.project_category} (${lead.case_number || 'Ny'})${isExtra ? ' · Ekstra dag' : ''}` }); }}
+                                                onMouseEnter={(evt) => { const rect = evt.currentTarget.getBoundingClientRect(); setHoverTooltip({ x: rect.left + rect.width/2, y: rect.top, content: `${lead.raw_data?.project_title || lead.project_category}${lead.case_number ? ` (${lead.case_number})` : ''}${isExtra ? ' · Ekstra dag' : ''}` }); }}
                                                 onMouseLeave={() => setHoverTooltip(null)}
                                                 draggable={isManager}
                                                 onDragStart={() => setDraggedLead(lead)}
@@ -2148,10 +2171,16 @@ const CalendarView = ({ leadsData, myProfile, simulatedRole, onCaseClick, setLea
             {/* POPOVER TIL SAG I KALENDER */}
             {popoverLead && createPortal(
                 <div onClick={() => setPopoverLead(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999 }}>
-                    <div 
+                    <div
+                        ref={popoverRef}
                         onClick={e => e.stopPropagation()}
-                        style={{ position: 'absolute', top: popoverLead.y + 30, left: popoverLead.x, background: '#fff', borderRadius: '12px', padding: '8px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}
+                        style={{ position: 'absolute', top: popoverPos ? popoverPos.top : popoverLead.yBottom + 6, left: popoverPos ? popoverPos.left : popoverLead.x, visibility: popoverPos ? 'visible' : 'hidden', background: '#fff', borderRadius: '12px', padding: '8px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '220px', maxWidth: '300px' }}
                     >
+                        {/* Fuld opgave-titel — så man kan se HELE overskriften når man trykker på sagen. */}
+                        <div style={{ padding: '6px 12px 8px', borderBottom: '1px solid #f1f5f9', marginBottom: '2px' }}>
+                            <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem', lineHeight: 1.3 }}>{popoverLead.lead.raw_data?.project_title || popoverLead.lead.project_category || 'Sag'}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>Sag {popoverLead.lead.case_number || String(popoverLead.lead.id).substring(0, 6)}</div>
+                        </div>
                         <button onClick={() => { onCaseClick(popoverLead.lead); setPopoverLead(null); }} style={{ padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', color: '#0f172a' }} onMouseOver={e=>e.currentTarget.style.background='#f1f5f9'} onMouseOut={e=>e.currentTarget.style.background='none'}>Gå til Ordrestyring</button>
                         {isManager && <button onClick={() => { const l = popoverLead.lead; setPopoverLead(null); const startStr = l.raw_data?.start_date ? new Date(l.raw_data.start_date).toISOString().substring(0,10) : new Date().toISOString().substring(0,10); openScheduleConfirm(l, startStr, estimerDage(l), 'edit'); }} style={{ padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', color: '#2563eb' }} onMouseOver={e=>e.currentTarget.style.background='#eff6ff'} onMouseOut={e=>e.currentTarget.style.background='none'}>Redigér planlægning</button>}
                         {isManager && <button onClick={() => { setAddDayLead(popoverLead.lead); setPopoverLead(null); }} style={{ padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', color: '#7c3aed' }} onMouseOver={e=>e.currentTarget.style.background='#f5f3ff'} onMouseOut={e=>e.currentTarget.style.background='none'}>Tilføj ekstra dage</button>}
