@@ -34,9 +34,17 @@
 -- ----------------------------------------------------------------------------
 -- (Plain kolonner uden hårde FK'er — samme konvention som subcontractors.)
 -- BEMÆRK: leads.id er BIGINT (ikke uuid) — derfor er lead_id bigint.
--- Sikker gen-kørsel: tabellen er ny/uden data, så vi dropper den først, hvis en
--- tidligere (fejlet) kørsel nåede at lave den med forkert kolonnetype.
-DROP TABLE IF EXISTS project_members CASCADE;
+-- Sikker gen-kørsel: rører ALDRIG en tabel med data (live gæste-adgang må ALDRIG
+-- slettes ved en gen-kørsel). Kun hvis en tidligere kørsel efterlod en TOM tabel
+-- (fx med forkert kolonnetype), selv-heler vi ved at droppe + genskabe. Har tabellen
+-- rækker, beholdes den præcis som den er.
+DO $$
+BEGIN
+    IF to_regclass('public.project_members') IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM public.project_members LIMIT 1) THEN
+        DROP TABLE public.project_members CASCADE;
+    END IF;
+END $$;
 CREATE TABLE IF NOT EXISTS project_members (
     id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lead_id               BIGINT NOT NULL,            -- Hvilken sag (leads.id — BIGINT)

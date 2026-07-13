@@ -21,8 +21,9 @@
 -- is_project_member() (SECURITY DEFINER, defineret i setup_guest_access.sql), så
 -- kun AKTIVE medlemskaber giver adgang. Egne sager udelades eksplicit.
 --
--- VIGTIGT: Kør IKKE setup_guest_access.sql igen for at få denne — den fil
--- DROPPER project_members ved gen-kørsel. Denne fil er selvstændig og additiv.
+-- Denne fil er selvstændig og additiv (kun en funktion — rører ingen tabel-data).
+-- NB: setup_guest_access.sql er nu sikker at gen-køre — den dropper KUN
+-- project_members hvis tabellen er TOM (aldrig når der er live gæster).
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.get_my_external_leads()
