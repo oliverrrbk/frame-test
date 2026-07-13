@@ -2,13 +2,19 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
     Home, Briefcase, Clock, Menu, X, Sparkles, MapPin, ChevronRight,
-    Plus, CheckCircle2, ListChecks, FileText, Hammer, Rocket, Building2, Mail, HardHat
+    Plus, CheckCircle2, ListChecks, FileText, Hammer, Rocket, Building2, Mail, HardHat, Smartphone
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import toast from 'react-hot-toast';
 import { fetchMyMemberships, getMemberRoleLabel, logGuestTimeEntry } from '../../utils/projectMembers';
 import { subscribeToPush, isPushSupported } from '../../utils/pushSubscription';
 import GorgeousSingleSelect from '../Dashboard/GorgeousSingleSelect';
+import InstallAppModal from '../Dashboard/InstallAppModal';
+import { isStandalonePWA } from '../../utils/pwaInstall';
+
+// Flag: gæsten har set "få appen på telefonen"-guiden (sættes også i GuestActivate,
+// så en nyaktiveret gæst ikke får den to gange).
+const GUEST_INSTALL_SEEN = 'bf_guest_install_seen';
 
 // Gæste-appen: en bevidst MINIMAL, mobil-først visning for underentreprenører.
 // Han ser KUN de sager han er koblet på, kan læse projektet og føre SINE egne timer.
@@ -108,7 +114,24 @@ export default function GuestDashboard({ myProfile }) {
     const [showNudge, setShowNudge] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [showTimeForm, setShowTimeForm] = useState(false);
+    const [showInstall, setShowInstall] = useState(false);
     const [pushState, setPushState] = useState('unknown');   // 'unknown' | 'prompt' | 'on' | 'unsupported'
+
+    // Vis "få Frame på telefonen"-guiden ÉN gang ved første besøg — men ikke hvis
+    // appen allerede kører installeret (standalone). Kan altid åbnes igen via menuen.
+    useEffect(() => {
+        try {
+            if (isStandalonePWA()) return;
+            if (localStorage.getItem(GUEST_INSTALL_SEEN)) return;
+            const t = setTimeout(() => setShowInstall(true), 900);
+            return () => clearTimeout(t);
+        } catch { /* localStorage kan være blokeret — så springer vi bare over */ }
+    }, []);
+
+    const closeInstall = () => {
+        setShowInstall(false);
+        try { localStorage.setItem(GUEST_INSTALL_SEEN, '1'); } catch { /* ignorér */ }
+    };
 
     // Det første en gæst møder: tilbud om at slå notifikationer til (giver bedst mening).
     useEffect(() => {
@@ -381,7 +404,8 @@ export default function GuestDashboard({ myProfile }) {
             {selectedCase && <CaseDetailModal lead={selectedCase} membership={memberships[String(selectedCase.id)]} onClose={() => setSelectedCase(null)} />}
             {showTimeForm && <TimeFormModal leads={leads} profile={myProfile} onClose={() => setShowTimeForm(false)} onSaved={() => { setShowTimeForm(false); reload(); }} />}
             {showNudge && <NudgeModal profile={myProfile} onClose={() => setShowNudge(false)} />}
-            {showMenu && <MenuModal profile={myProfile} onClose={() => setShowMenu(false)} onNudge={() => { setShowMenu(false); setShowNudge(true); }} />}
+            {showMenu && <MenuModal profile={myProfile} onClose={() => setShowMenu(false)} onNudge={() => { setShowMenu(false); setShowNudge(true); }} onInstall={() => { setShowMenu(false); setShowInstall(true); }} />}
+            {showInstall && <InstallAppModal onClose={closeInstall} />}
         </div>
     );
 }
@@ -694,7 +718,7 @@ function NudgeModal({ profile, onClose }) {
     );
 }
 
-function MenuModal({ profile, onClose, onNudge }) {
+function MenuModal({ profile, onClose, onNudge, onInstall }) {
     const logout = async () => { await supabase.auth.signOut(); window.location.href = '/'; };
     return (
         <Sheet title="Menu" onClose={onClose}>
@@ -707,6 +731,15 @@ function MenuModal({ profile, onClose, onNudge }) {
                     <div style={{ color: T.textSecondary, fontSize: '0.85rem' }}>Gæst · Underentreprenør</div>
                 </div>
             </div>
+
+            <button onClick={onInstall} className="gd-btn"
+                style={{ width: '100%', textAlign: 'left', cursor: 'pointer', border: `1px solid ${T.borderInner}`, borderRadius: '16px', padding: '15px', marginBottom: '12px', background: '#fff', color: T.textPrimary, display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '12px', background: T.blueSoft, color: T.blue, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Smartphone size={20} /></div>
+                <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.98rem' }}>Få Frame som app</div>
+                    <div style={{ fontSize: '0.83rem', color: T.textSecondary }}>Læg den på din hjemmeskærm</div>
+                </div>
+            </button>
 
             <button onClick={onNudge} className="gd-btn"
                 style={{ width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none', borderRadius: '18px', padding: '18px', marginBottom: '12px', ...GREEN_BTN, display: 'flex', alignItems: 'center', gap: '14px' }}>

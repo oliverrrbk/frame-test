@@ -116,7 +116,7 @@ export default function GuestActivate() {
                                 )}
                             </div>
 
-                            <button onClick={() => navigate('/dashboard')} className="w-full bg-slate-900 text-white font-bold text-[15px] py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-lg group">
+                            <button onClick={() => { try { localStorage.setItem('bf_guest_install_seen', '1'); } catch { /* ignorér */ } navigate('/dashboard'); }} className="w-full bg-slate-900 text-white font-bold text-[15px] py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-lg group">
                                 Fortsæt til Bison Frame <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                             </button>
                         </div>
