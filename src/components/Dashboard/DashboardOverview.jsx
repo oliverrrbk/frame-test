@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { getFeatures, isTabEnabled } from '../../utils/features';
+import GettingStartedMeter from './GettingStartedMeter';
 import { 
     Info, 
     TrendingUp, 
@@ -327,7 +328,16 @@ export default function DashboardOverview({ leadsData, carpenterProfile, myProfi
 
     return (
         <div className="overview-container" style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px', animation: 'fadeIn 0.5s ease-out', paddingBottom: '40px' }}>
-            
+
+            {/* Kom godt i gang — goal-gradient-måler (starter på 20%, forsvinder ved 100%/luk) */}
+            <GettingStartedMeter
+                carpenterProfile={carpenterProfile}
+                leadsData={leadsData}
+                setActiveTab={setActiveTab}
+                goToTab={goToTab}
+                onCreateQuote={onCreateQuote}
+            />
+
             {/* Header & Quick Actions */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
                 <div className="hide-on-mobile">

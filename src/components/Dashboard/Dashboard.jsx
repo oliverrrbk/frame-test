@@ -41,6 +41,7 @@ import SupplierLibrary from './SupplierLibrary';
 import { SubcontractorManager } from './Subcontractors';
 import { getFeatures, getPlanFeatures, getModules, isTabEnabled } from '../../utils/features';
 import TimesheetTrialBanner from './TimesheetTrialBanner';
+import PaywallLock from './PaywallLock';
 import QuickQuoteBuilder from './QuickQuoteBuilder';
 import MaterialListBuilder from './MaterialListBuilder';
 import Coachmark from './Coachmark';
@@ -3549,27 +3550,13 @@ const Dashboard = () => {
                 
                 <div className="dashboard-content" style={activeTab === 'overview' && ['worker', 'apprentice', 'sales'].includes(effectiveRole) ? { padding: 0, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' } : {}}>
                     {isPaywallActive && activeTab !== 'account_settings' ? (
-                        <div className="smooth-fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center' }}>
-                            <div style={{ background: '#fef2f2', border: '1px solid #e8e6e1', padding: '40px', borderRadius: '20px', maxWidth: '600px', boxShadow: '0 10px 25px -5px rgba(239, 68, 68, 0.1)' }}>
-                                <ShieldAlert size={64} color="#ef4444" style={{ margin: '0 auto 24px' }} />
-                                <h2 style={{ fontSize: '24px', color: '#7f1d1d', marginBottom: '16px', fontWeight: 'bold' }}>
-                                    {paywallReason === 'trial_expired' ? 'Din prøveperiode er udløbet' : 'Abonnement inaktivt'}
-                                </h2>
-                                <p style={{ color: '#991b1b', fontSize: '16px', marginBottom: '24px', lineHeight: '1.6' }}>
-                                    {paywallReason === 'trial_expired' 
-                                        ? 'For at fortsætte med at bruge platformen og sende tilbud, skal du tilknytte et firmakort. Dine data, igangværende tilbud og historik er stadig gemt trygt hos os.'
-                                        : 'Dit abonnement står i øjeblikket som inaktivt. Venligst opdater dine betalingsoplysninger for at genoptage adgangen til platformen og dine tilbud.'}
-                                </p>
-                                <button 
-                                    onClick={() => setActiveTab('account_settings')}
-                                    style={{ fontSize: '16px', padding: '14px 28px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.2s' }}
-                                    onMouseOver={(e) => e.currentTarget.style.background = '#dc2626'}
-                                    onMouseOut={(e) => e.currentTarget.style.background = '#ef4444'}
-                                >
-                                    Gå til Betaling
-                                </button>
-                            </div>
-                        </div>
+                        <PaywallLock
+                            reason={paywallReason}
+                            carpenterProfile={carpenterProfile}
+                            role={effectiveRole}
+                            leadsData={roleFilteredLeads}
+                            onGoToBilling={() => setActiveTab('account_settings')}
+                        />
                     ) : (
                         <div key={activeTab} className="smooth-fade-in" style={activeTab === 'overview' && ['worker', 'apprentice', 'sales'].includes(effectiveRole) ? { flex: 1, height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' } : { height: '100%' }}>
                         {renderDashboardMobileHeader()}
