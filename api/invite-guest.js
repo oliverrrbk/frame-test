@@ -35,9 +35,14 @@ export default async function handler(req, res) {
 
         // 2. Find kalderens firma + bekræft at han ejer/administrerer sagen
         const { data: callerProfile } = await supabase
-            .from('carpenters').select('id, role, company_id, company_name, subscription_status').eq('id', caller.id).single();
+            .from('carpenters').select('id, role, company_id, company_name, subscription_status, logo_url').eq('id', caller.id).single();
         if (!callerProfile) return res.status(403).json({ error: 'Profil ikke fundet.' });
         const callerCompanyId = callerProfile.company_id || callerProfile.id;
+
+        // Co-branding til invitations-mailen: brug FIRMAETS logo + navn (ikke den
+        // enkelte medarbejders), så modtageren ser hvem invitationen kommer fra.
+        let inviterName = callerProfile.company_name || 'En virksomhed';
+        let inviterLogo = callerProfile.logo_url || null;
 
         // Guardrail: kun firmaer med gyldigt abonnement må sprede gæste-logins (en udløbet
         // konto skal ikke kunne blive ved). Vi tjekker FIRMAETS (ejerens) status — ikke den
@@ -46,8 +51,12 @@ export default async function handler(req, res) {
         let ownerStatus = callerProfile.subscription_status;
         if (callerProfile.company_id) {
             const { data: owner } = await supabase
-                .from('carpenters').select('subscription_status').eq('id', callerCompanyId).single();
-            if (owner) ownerStatus = owner.subscription_status;
+                .from('carpenters').select('subscription_status, company_name, logo_url').eq('id', callerCompanyId).single();
+            if (owner) {
+                ownerStatus = owner.subscription_status;
+                inviterName = owner.company_name || inviterName;
+                inviterLogo = owner.logo_url || inviterLogo;
+            }
         }
         const subStatus = ownerStatus || 'trialing';
         if (!['active', 'trialing', 'exempt'].includes(subStatus)) {
@@ -133,9 +142,10 @@ export default async function handler(req, res) {
             if (resendApiKey) {
                 const html = getGuestInviteTemplate(
                     (name || '').split(' ')[0],
-                    callerProfile.company_name || 'En virksomhed',
+                    inviterName,
                     projectTitle || 'et byggeprojekt',
-                    actionLink
+                    actionLink,
+                    inviterLogo
                 );
                 try {
                     await fetch('https://api.resend.com/emails', {

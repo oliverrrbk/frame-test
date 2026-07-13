@@ -812,8 +812,19 @@ export const getEmployeeInviteTemplate = (employeeName, loginEmail, loginPasswor
 
 // Gæste-invitation: en underentreprenør tilføjes på ÉT projekt og vælger selv sin
 // adgangskode + godkender vilkår via det personlige link (actionLink).
-export const getGuestInviteTemplate = (firstName, inviterCompanyName, projectTitle, actionLink) => {
+export const getGuestInviteTemplate = (firstName, inviterCompanyName, projectTitle, actionLink, logoUrl = null) => {
+    // Co-branding: vis den inviterende mesters logo + navn øverst, så modtageren
+    // straks kan se hvem invitationen er fra (ikke spam). Bison-branding beholdes i
+    // header/footer (getBaseTemplate med carpenter=null) — bevidst IKKE white-label.
+    const inviterBand = (logoUrl || inviterCompanyName) ? `
+        <div style="text-align: center; margin: 0 0 24px 0; padding: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px;">
+            <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #94a3b8; margin-bottom: ${logoUrl ? '10px' : '0'};">Invitation fra</div>
+            ${logoUrl ? `<img src="${logoUrl}" alt="${inviterCompanyName || ''}" style="max-height: 54px; max-width: 180px; display: inline-block; vertical-align: middle;" />` : ''}
+            ${inviterCompanyName ? `<div style="margin-top: ${logoUrl ? '8px' : '0'}; font-size: 17px; font-weight: 800; color: #0f172a;">${inviterCompanyName}</div>` : ''}
+        </div>
+    ` : '';
     const content = `
+        ${inviterBand}
         <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Velkommen til Bison Frame, ${firstName || 'og god arbejdslyst'} 👋</h2>
         <p style="color: #334155;"><strong>${inviterCompanyName || 'En virksomhed'}</strong> har oprettet dig som underleverandør på <strong>${projectTitle || 'et byggeprojekt'}</strong>, så du nemt kan registrere dine timer på projektet — direkte fra mobilen.</p>
         <p style="color: #334155;">Vi er glade for, at du bruger Bison Frame. Det er helt <strong>gratis</strong> for dig som underleverandør, og du skal ikke sætte dig ind i noget stort — du logger ind, ser dit projekt og fører dine timer.</p>
