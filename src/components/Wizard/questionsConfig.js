@@ -26,7 +26,7 @@ const getDynamicRoofImage = (material, feature) => {
     if (matKey.includes('stål') || matKey.includes('stl') || matKey.includes('stålplader')) matGroup = 'staal';
     if (matKey.includes('decra')) matGroup = 'decra';
     if (matKey.includes('beton')) matGroup = 'beton';
-    if (matKey.includes('skiffer')) {
+    if (matKey.includes('skifer')) {
         if (matKey.includes('bldt') || matKey.includes('blødt')) {
             matGroup = 'blodskiffer';
         } else {
@@ -106,7 +106,7 @@ const getDynamicEavesImage = (material, eavesType) => {
     if (matKey.includes('stål') || matKey.includes('stl') || matKey.includes('stålplader')) matGroup = 'staal';
     if (matKey.includes('tegl')) matGroup = 'tegl';
     if (matKey.includes('beton')) matGroup = 'beton';
-    if (matKey.includes('skiffer')) {
+    if (matKey.includes('skifer')) {
         if (matKey.includes('bldt') || matKey.includes('blødt')) {
             matGroup = 'blodskiffer';
         } else {
@@ -215,13 +215,13 @@ export const QUESTIONS = {
             condition: (d) => d.roofTaskType === 'Komplet tagudskiftning (Nyt tag)',
             options: [
                 { label: 'Paptag', img: '/images/icon_paptag_v2_1781084313665.png' },
-                { label: 'Tagplader (eternit asbest fri)', img: '/images/icon_eternit_1781084005360.png' },
+                { label: 'Tagplader (eternit, asbestfri)', img: '/images/icon_eternit_1781084005360.png' },
                 { label: 'Decra', img: '/images/icon_decra_1781084015600.png' },
                 { label: 'Stålplader', img: '/images/icon_staal_1781084026597.png' },
                 { label: 'Tegl', img: '/images/icon_tegl_v2_1781084324346.png' },
                 { label: 'Betontagsten', img: '/images/icon_beton_1781083962338.png' },
-                { label: 'Skiffer (hårdt materiale)', img: '/images/icon_skiffer_1781083973083.png' },
-                { label: 'Skiffer (blødt materiale)', img: '/images/icon_skiffer_1781083973083.png' },
+                { label: 'Skifer (hårdt materiale)', img: '/images/icon_skiffer_1781083973083.png' },
+                { label: 'Skifer (blødt materiale)', img: '/images/icon_skiffer_1781083973083.png' },
                 { label: 'Metal-tag (zink, stål, kobber)', img: '/images/icon_zink_1781083981812.png' }
             ] 
         },
@@ -281,19 +281,19 @@ export const QUESTIONS = {
         { 
             id: 'oldRoofType', 
             type: 'visual_select', 
-            label: 'Hvilken type tag er der på nu? (Dette afmonteres og afskaffes altid)', 
+            label: 'Hvilken type tag er der på nu? (Dette afmonteres og bortskaffes altid)', 
             condition: (d) => d.roofTaskType === 'Komplet tagudskiftning (Nyt tag)',
             options: [
                 { label: 'Paptag', img: '/images/icon_paptag_v2_1781084313665.png' },
-                { label: 'Tagplader (eternit asbest fri)', img: '/images/icon_eternit_1781084005360.png' },
+                { label: 'Tagplader (eternit, asbestfri)', img: '/images/icon_eternit_1781084005360.png' },
                 { label: 'Tagplader (asbest)', img: '/images/icon_roof_asbestos_1781099785887.png' },
-                { label: 'Tagplader vides ikke', img: '/images/icon_eternit_1781084005360.png' },
+                { label: 'Tagplader (vides ikke)', img: '/images/icon_eternit_1781084005360.png' },
                 { label: 'Decra', img: '/images/icon_decra_1781084015600.png' },
                 { label: 'Stålplader', img: '/images/icon_staal_1781084026597.png' },
                 { label: 'Tegl', img: '/images/icon_tegl_v2_1781084324346.png' },
                 { label: 'Betontagsten', img: '/images/icon_beton_1781083962338.png' },
-                { label: 'Skiffer (hårdt materiale)', img: '/images/icon_skiffer_1781083973083.png' },
-                { label: 'Skiffer (blødt materiale)', img: '/images/icon_skiffer_1781083973083.png' },
+                { label: 'Skifer (hårdt materiale)', img: '/images/icon_skiffer_1781083973083.png' },
+                { label: 'Skifer (blødt materiale)', img: '/images/icon_skiffer_1781083973083.png' },
                 { label: 'Metal-tag (zink, stål, kobber)', img: '/images/icon_zink_1781083981812.png' }
             ] 
         },
@@ -431,7 +431,7 @@ export const QUESTIONS = {
             id: 'qualityLevel',
             type: 'select',
             label: 'Hvilket kvalitetsniveau ønsker du på vinduerne?',
-            tooltip: 'Robust standardkvalitet er yderst holdbare og populære elementer. Eksklusiv Premiumkvalitet er high-end elementer (fx Mahogni) med uforlignelig holdbarhed og glød.',
+            tooltip: 'Robust standardkvalitet dækker yderst holdbare og populære modeller. Eksklusiv Premiumkvalitet dækker high-end modeller (fx Mahogni) med uforlignelig holdbarhed og glød.',
             options: ['Robust standardkvalitet', 'Eksklusiv Premiumkvalitet']
         },
         {
@@ -547,7 +547,7 @@ export const QUESTIONS = {
         { 
             id: 'disposal', 
             type: 'select', 
-            label: 'Skal de nuværende døre afmonteres og afskaffes?', 
+            label: 'Skal de nuværende døre afmonteres og bortskaffes?', 
             options: [
                 'Ja, vi skal afmontere og bortskaffe dem', 
                 'Ja, vi skal kun afmontere (vi kører dem selv væk)', 
@@ -632,7 +632,7 @@ export const QUESTIONS = {
                 { label: 'Tagterrasse', img: '/images/terrace_roof.png' }
             ] 
         },
-        { id: 'disposal', type: 'select', label: 'Skal der afmonteres og afskaffes en eksisterende terrasse først?', options: ['Ja, vi skal afmontere og bortskaffe den', 'Ja, vi skal kun afmontere (vi kører det selv væk)', 'Nej'] },
+        { id: 'disposal', type: 'select', label: 'Skal der afmonteres og bortskaffes en eksisterende terrasse først?', options: ['Ja, vi skal afmontere og bortskaffe den', 'Ja, vi skal kun afmontere (vi kører det selv væk)', 'Nej'] },
         { id: 'roofTerraceFeet', type: 'select', label: 'Tagterrasse underlag: Skal terrassen opklodses på justerbare terrassefødder (skåner tagpappet)?', condition: { field: 'elevation', value: 'Tagterrasse' }, options: ['Ja, den skal klodses op på plastfødder', 'Nej'] },
         { 
             id: 'material', 
@@ -745,7 +745,7 @@ export const QUESTIONS = {
         { 
             id: 'oldCeilingType', 
             type: 'visual_select', 
-            label: 'Hvilken type loft er der på nu? (Dette afmonteres og afskaffes altid)',
+            label: 'Hvilken type loft er der på nu? (Dette afmonteres og bortskaffes altid)',
             options: [
                 { label: 'Træloft (listeloft/paneler/rustikloft)', img: '/images/ceil_wood_1781083315165.png' },
                 { label: 'Gipsloft (standard 2-lag)', img: '/images/ceil_gypsum_1781083325455.png' },

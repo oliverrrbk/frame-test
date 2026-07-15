@@ -82,6 +82,17 @@ export const mapMaterialName = (cat, material) => {
         }
     }
     
+    if (cat === 'roof') {
+        // De kundevendte labels er rettet stavemæssigt (Skifer, asbestfri, "(vides ikke)"),
+        // men de interne pris-/tidsnøgler i prices.js, WORK_FORMULAS og materiale-kartoteket
+        // bruger fortsat den gamle stavemåde. Oversæt derfor tilbage, så opslag matcher.
+        // Ukendte/gamle værdier passerer uændret igennem — bagudkompatibelt med gemte tilbud.
+        if (mat === 'Skifer (hårdt materiale)') return 'Skiffer (hårdt materiale)';
+        if (mat === 'Skifer (blødt materiale)') return 'Skiffer (blødt materiale)';
+        if (mat === 'Tagplader (eternit, asbestfri)') return 'Tagplader (eternit asbest fri)';
+        if (mat === 'Tagplader (vides ikke)') return 'Tagplader vides ikke';
+    }
+
     if (cat === 'fence') {
         return mat;
     }
@@ -298,6 +309,11 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
     }
     if (d.material) {
         d.material = mapMaterialName(cat, d.material);
+    }
+    // Gammelt tag bruger samme rettede labels som nyt tag (Skifer/asbestfri/"(vides ikke)"),
+    // og slås op i disposalHoursByOldType + asbest-tillæg — oversæt derfor tilbage til de interne nøgler.
+    if (cat === 'roof' && d.oldRoofType) {
+        d.oldRoofType = mapMaterialName(cat, d.oldRoofType);
     }
 
     // Sanity defaults så manglende DB-værdier ikke producerer NaN gennem hele pris-beregningen.
@@ -858,11 +874,19 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
         }
 
         if (cat === 'floor') {
+            // Svarmulighederne for mønster/gulvvarme er længere tekststrenge (fx 'Nej, helt standard
+            // montering' og 'Ja, vi skal opbygge nyt gulvvarme (sporplader/varmefordeling)'). Derfor
+            // matcher vi på indhold — ikke på eksakt lighed med en sentinel — ellers rammer vi aldrig
+            // de rette grene, og standardgulve blev fejlagtigt prissat som specialmønster.
+            const isPatternFloor = !!(d.floorPattern && d.floorPattern.includes('mønster'));
+            const hasFloorHeating = !!(d.underfloorHeating && d.underfloorHeating.startsWith('Ja'));
+            const buildsNewFloorHeating = !!(d.underfloorHeating && d.underfloorHeating.includes('sporplader'));
+
             // Tilføj materialespild (afskær), da tømreren altid skal købe mere ind end det reelle m²-areal
             if (!userSuppliesMaterials) {
                 let matPriceDb = indexCat[d.material] || 400;
                 let baseFloorCost = (numericAmount * matPriceDb) * dbSettings.material_markup;
-                if (d.floorPattern && d.floorPattern !== 'Standard (Lige brædder)') {
+                if (isPatternFloor) {
                     materialCost += baseFloorCost * 0.15; // 15% spild til mønster
                     bArr.push(`Tillæg: 15% materialespild (afskær) medregnet til specialmønster (${d.floorPattern})`);
                 } else {
@@ -905,7 +929,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
 
             // Tilføj kun almindelig foam, hvis der slet ikke er gulvvarme. Både sporplader og støbt gulvvarme kræver eget/special underlag!
             const isWoodFoundation = d.floorFoundation === 'Strøer / Trækonstruktion' || d.floorFoundation === 'Ved ikke / Andet';
-            if (d.underfloorHeating !== 'Ja') {
+            if (!hasFloorHeating) {
                 // Massivt træ lagt direkte på strøer svømmer ikke, og bruger derfor ikke et fuldt lag foam/pap, kun evt. strimler.
                 if (!(d.material === 'Massivt træ' && isWoodFoundation)) {
                     laborHours += numericAmount * (formula.underlayHours || 0.1);
@@ -917,10 +941,10 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             if (isWoodFoundation) {
                 const foundationText = d.floorFoundation === 'Ved ikke / Andet' ? 'Sikkerhedstillæg (Uvist underlag): ' : 'Tillæg: ';
                 // Undgå dobbeltkonfekt: Hvis de også får gulvvarme (som beregnes med sporplader), fungerer sporpladen som det bærende undergulv!
-                if (d.underfloorHeating === 'Ja') {
+                if (buildsNewFloorHeating) {
                     laborHours += numericAmount * 0.2; // Kun lidt ekstra tid til tilpasning af selve strøerne
                     bArr.push(`${foundationText}Tilpasning af strøer (bærende materialepris dækkes af sporpladerne)`);
-                } else if (d.material === 'Massivt træ' && (!d.floorPattern || d.floorPattern === 'Standard (Lige brædder)')) {
+                } else if (d.material === 'Massivt træ' && !isPatternFloor) {
                     laborHours += numericAmount * 0.2; // Lidt tid til strø-tilpasning før plankerne lægges
                     bArr.push(`${foundationText}Montering af massive træplanker direkte på strøer (kræver ikke bærende spånplade-undergulv)`);
                 } else {
@@ -940,16 +964,21 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             bArr.push(`Standard: Levering og montering af nye fodlister langs alle vægge for komplet finish`);
             
             // Specialmønstre (Sildeben, Chevron etc.) koster næsten altid dobbelt tid og speciallim til undergulv
-            if (d.floorPattern && d.floorPattern !== 'Standard (Lige brædder)') {
+            if (isPatternFloor) {
                 laborHours += initialInstallHours * 1.0; // Mønster tager oftest dobbelt så lang tid pga. præcision, limning og mange skæringer
                 if (!userSuppliesMaterials) materialCost += numericAmount * (indexCat['Limning (Fuldlimning af mønstergulv)'] || 60) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Forøget tidsforbrug (+100%) samt dyr speciallim til fuldlimning af mønstergulv (${d.floorPattern})`);
             }
 
-            if (d.underfloorHeating === 'Ja') {
+            if (buildsNewFloorHeating) {
                 laborHours += initialInstallHours * 0.8;
-                if (!userSuppliesMaterials) materialCost += (numericAmount * (indexCat['Gulvvarme (Sporplader)'] || 450)) * dbSettings.material_markup; 
-                bArr.push(`Tillæg: Etablering eller hensyntagen til gulvvarme (Prissat ud fra fuld opbygning med sporplader/varmefordelingsplader)`);
+                if (!userSuppliesMaterials) materialCost += (numericAmount * (indexCat['Gulvvarme (Sporplader)'] || 450)) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Etablering af nyt gulvvarme (Prissat ud fra fuld opbygning med sporplader/varmefordelingsplader)`);
+            } else if (hasFloorHeating) {
+                // Eksisterende støbt gulvvarme: kun varmeledende specialunderlag (lav isolans) kræves.
+                laborHours += numericAmount * 0.05;
+                if (!userSuppliesMaterials) materialCost += (numericAmount * (indexCat['Gulvvarme specialunderlag (pr m2)'] || 90)) * dbSettings.material_markup;
+                bArr.push(`Tillæg: Varmeledende specialunderlag til flydende gulv oven på eksisterende støbt gulvvarme`);
             }
 
             // Faste forhindringer (køkkenø, søjler) tilføjelser
@@ -1029,12 +1058,12 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                     let threshold = formula.containerThreshold || 30;
                     if (threshold > 0) {
                         let containerCount = Math.max(1, Math.ceil(numericAmount / threshold));
-                        let containerPrice = containerCount * (dbSettings.containerDisposalFee || 2500);
+                        let containerPrice = containerCount * (dbSettings.container_disposal_fee || 2500);
                         materialCost += containerPrice * (dbSettings.equipment_markup || 1.05);
                         externalLeaseCost += containerPrice;
                         bArr.push(`Bortskaffelse: Leje af ${containerCount} affaldscontainer(e) inkl. deponi til gammelt træ`);
                     } else {
-                        let trailerPrice = (dbSettings.trailerDisposalFee || 800);
+                        let trailerPrice = (dbSettings.trailer_disposal_fee || 800);
                         materialCost += trailerPrice * (dbSettings.equipment_markup || 1.05);
                         externalLeaseCost += trailerPrice;
                         bArr.push(`Bortskaffelse: Kørsel til genbrugsstation (Trailer / Miljøgebyr)`);
