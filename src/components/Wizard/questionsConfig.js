@@ -584,14 +584,14 @@ export const QUESTIONS = {
             condition: (d) => d.doorStyle === 'Hoveddør (Udvendig)',
             tooltip: 'Vælg det ønskede materiale til din hoveddør. Træ/Alu er meget populært pga. minimal vedligeholdelse udvendigt.',
             options: [
-                { label: 'Massivt træ', img: '/images/door_front_solid_wood_danish_v2.png' },
-                { label: 'Massivt træ og glas', img: '/images/door_front_solid_wood_glass_danish_v2.png' },
-                { label: 'Finér', img: '/images/door_front_veneer_danish_v2.png' },
-                { label: 'PVC', img: '/images/door_front_pvc_solid_danish_v2.png' },
-                { label: 'PVC og glas', img: '/images/door_front_pvc_glass_danish_v2.png' },
-                { label: 'Aluminium', img: '/images/door_front_aluminium_danish_v2.png' },
-                { label: 'Træ / Alu (Kombination)', img: '/images/door_front_wood_alu_danish_v2.png' },
-                { label: 'Træ / Alu med glas', img: '/images/door_front_wood_alu_glass_danish_v2.png' }
+                { label: 'Massivt træ', img: '/images/door_front_solid_wood_danish_v3.png' },
+                { label: 'Massivt træ og glas', img: '/images/door_front_solid_wood_glass_danish_v3.png' },
+                { label: 'Finér', img: '/images/door_front_veneer_danish_v3.png' },
+                { label: 'PVC', img: '/images/door_front_pvc_solid_danish_v3.png' },
+                { label: 'PVC og glas', img: '/images/door_front_pvc_glass_danish_v3.png' },
+                { label: 'Aluminium', img: '/images/door_front_aluminium_danish_v3.png' },
+                { label: 'Træ / Alu (Kombination)', img: '/images/door_front_wood_alu_danish_v3.png' },
+                { label: 'Træ / Alu med glas', img: '/images/door_front_wood_alu_glass_danish_v3.png' }
             ] 
         },
         { 
@@ -618,20 +618,6 @@ export const QUESTIONS = {
                 'Nej, standard lås/greb er fint',
                 'Ja, vi skal levere og montere elektronisk smart-lås'
             ]
-        },
-        { 
-            id: 'doorHinge', 
-            type: 'visual_select', 
-            condition: (d) => d.doorStyle !== 'Indvendig dør',
-            label: 'Hvordan skal døren hængsles og åbne?', 
-            tooltip: 'Hængslingen bestemmes ved at se døren fra den side, hvor hængslerne er synlige. Højrehængt betyder at hængslerne sidder i højre side, og døren svinger til højre.',
-            options: [
-                { label: 'Højrehængt indadgående', img: '/images/hinge_right_in.png' },
-                { label: 'Højrehængt udadgående', img: '/images/hinge_right_out.png' },
-                { label: 'Venstrehængt indadgående', img: '/images/hinge_left_in.png' },
-                { label: 'Venstrehængt udadgående', img: '/images/hinge_left_out.png' },
-                { label: 'Ved ikke (Vi vurderer)', img: '/images/door_hinge_unknown.png' }
-            ] 
         }
     ],
     terrace: [
