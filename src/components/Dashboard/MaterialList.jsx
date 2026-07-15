@@ -496,9 +496,16 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
             ? parseFloat(lead.raw_data.calc_data.materialCostBase)
             : Math.round((parseFloat(lead.raw_data?.calc_data?.materialCost) || 0) / defaultMarkup));
     const supplierInvoices = lead.raw_data?.supplier_invoices || [];
-    const totalSpent = supplierInvoices
+    const supplierSpent = supplierInvoices
         .filter(inv => inv.category === 'Materialer' || !inv.category)
         .reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
+    // Materiallister hæftet på tilbuddet bestilles+betales, så snart kunden bekræfter.
+    // Vis dem derfor som FORBRUGT på en aktiv/afsluttet sag — indtil rigtige leverandør-
+    // bilag begynder at tælle (så vinder de faktiske beløb, så vi ikke dobbelt-tæller).
+    const committedFromLists = ['Bekræftet opgave', 'Sæt i bero', 'Historik'].includes(lead.status)
+        ? (lead.raw_data?.material_pdfs || []).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0)
+        : 0;
+    const totalSpent = supplierSpent > 0 ? supplierSpent : committedFromLists;
     const budgetRemaining = originalBudget - totalSpent;
     const isOverBudget = budgetRemaining < 0;
 

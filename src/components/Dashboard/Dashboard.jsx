@@ -6552,7 +6552,7 @@ const Dashboard = () => {
                                     draftCreator={myProfile}
                                     isMobile={isMobile}
                                     initialLead={quotePrefill}
-                                    onOpenMaterialList={(lead) => openMaterialBuilder(lead)}
+                                    onOpenMaterialList={(lead, opts) => openMaterialBuilder(lead, opts)}
                                     onDraftSaved={(lead) => setQuotePrefill(lead)}
                                     onCancel={() => {
                                         setIsCreateLeadModalOpen(false);
@@ -6650,7 +6650,7 @@ const Dashboard = () => {
                                 draftCreator={myProfile}
                                 isMobile={isMobile}
                                 initialLead={editQuoteLead}
-                                onOpenMaterialList={(lead) => openMaterialBuilder(lead || editQuoteLead)}
+                                onOpenMaterialList={(lead, opts) => openMaterialBuilder(lead || editQuoteLead, opts)}
                                 onDraftSaved={(lead) => setEditQuoteLead(lead)}
                                 onCancel={() => setEditQuoteLead(null)}
                                 onDeleted={async () => {

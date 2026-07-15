@@ -440,6 +440,10 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     // Materialer
     const [materialCost, setMaterialCost] = useState(mq0.materialCost ? String(mq0.materialCost) : '');   // indkøbspris ekskl. moms
     const [markup, setMarkup] = useState(mq0.materialMarkupPct != null ? String(mq0.materialMarkupPct) : '10');             // avance % (standard 10 %)
+    // Materialebudgettet kan enten komme AUTOMATISK fra summen af de vedhæftede
+    // materiallister (hver liste har sit eget beløb) eller sættes manuelt (Indkøbspris).
+    // Default = fra listerne, medmindre tømreren bevidst overstyrer.
+    const [budgetFromLists, setBudgetFromLists] = useState(mq0.materialBudgetFromLists !== false);
     // Arbejde
     const [laborMode, setLaborMode] = useState(mq0.laborMode || 'fixed');    // 'fixed' | 'hourly'
     const [laborFixed, setLaborFixed] = useState(mq0.laborFixed ? String(mq0.laborFixed) : '');
@@ -905,9 +909,21 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [breakdownManHours]);
 
+    // Sum af de vedhæftede materiallisters beløb (både allerede gemte PDF'er og netop
+    // valgte, endnu ikke uploadede). Hver liste bærer sit eget beløb (ekskl. moms), så
+    // "hver enkelt materialepris" lægges sammen til ét samlet materialebudget.
+    const listsMaterialTotal = useMemo(() => {
+        const savedSum = savedPdfs.reduce((s, p) => s + (num(p.amount) || 0), 0);
+        const stagedSum = materialFiles.reduce((s, f) => s + (num(f.amount) || 0), 0);
+        return savedSum + stagedSum;
+    }, [savedPdfs, materialFiles]);
+    // Aktivt budget: fra listerne (hvis valgt og der er et beløb), ellers det manuelle felt.
+    const useListsBudget = budgetFromLists && listsMaterialTotal > 0;
+    const effMaterialCost = useListsBudget ? listsMaterialTotal : num(materialCost);
+
     // ---- Live-beregning ----
     const calc = useMemo(() => {
-        const mCost = num(materialCost);
+        const mCost = effMaterialCost;
         const mPct = num(markup);
         const materialSell = mCost * (1 + mPct / 100);
         const laborTotal = laborMode === 'hourly' ? num(laborRate) * effLaborHours : num(laborFixed);
@@ -916,7 +932,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         const vat = totalExVat * 0.25;
         const totalIncVat = totalExVat + vat;
         return { mCost, mPct, materialSell, laborTotal, extrasSum, totalExVat, vat, totalIncVat };
-    }, [materialCost, markup, laborMode, laborFixed, laborRate, effLaborHours, extras]);
+    }, [effMaterialCost, markup, laborMode, laborFixed, laborRate, effLaborHours, extras]);
 
     const buildQuoteObj = () => {
     // Normalisér editorens rå HTML til vores faste format (p/h2/h3/ul/ol/li/b/i/u +
@@ -926,6 +942,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         materialCost: calc.mCost,
         materialMarkupPct: calc.mPct,
         materialSell: calc.materialSell,
+        materialBudgetFromLists: useListsBudget,
         laborMode,
         laborFixed: num(laborFixed),
         laborRate: num(laborRate),
@@ -1013,6 +1030,9 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 calc_data: { materialCost: calc.materialSell, materialCostBase: calc.mCost, laborHours: effLaborHours, hourlyRate: num(laborRate) },
                 actual_quote_price: calc.totalExVat,
                 customerDetails: { ...(baseRaw.customerDetails || {}), street: customer.address, zip: customer.zip, city: customer.city, customerType, cvr: customerType === 'erhverv' ? cvr : '' },
+                // Bevar prissatte materiallister (beløb pr. liste), så auto-gem holder
+                // budgettet og listerne i sync uden at vente på et eksplicit gem.
+                material_pdfs: savedPdfs,
             };
             const { error } = await supabase.from('leads').update({
                 customer_name: customer.name,
@@ -1125,14 +1145,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             // så de ikke overskriver hinanden i storage.
             const materialPdfs = [];
             for (let i = 0; i < materialFiles.length; i++) {
-                const file = materialFiles[i];
+                const { file, amount } = materialFiles[i];
                 const ext = file.name.split('.').pop() || 'pdf';
                 const fn = `manual_${quoteToken}_mat_${uid()}.${ext}`;
                 const { error: upErr } = await supabase.storage.from('uploads').upload(fn, file, { upsert: true, cacheControl: '0' });
                 if (upErr) throw new Error('Upload af materiale-PDF fejlede: ' + upErr.message);
                 const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fn);
-                // amount kun på den første (uændret adfærd for enkelt-fil); feltet vises ikke som sum.
-                materialPdfs.push({ id: uid(), name: file.name, url: publicUrl, amount: i === 0 ? calc.mCost : 0, date: new Date().toISOString() });
+                // Hver liste bærer sit eget beløb (ekskl. moms) — summen udgør materialebudgettet.
+                materialPdfs.push({ id: uid(), name: file.name, url: publicUrl, amount: num(amount) || 0, date: new Date().toISOString() });
             }
 
             // 2) Generér tilbuds-PDF og upload
@@ -1264,11 +1284,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
 
     // "Generér materialeliste til leverandør": listen skal hæftes på tilbuddet.
     // Er tilbuddet ikke gemt endnu, gemmer vi det som kladde FØRST og hæfter så listen på.
-    const handleOpenMaterialList = async () => {
+    // opts = { listId, listName }: hvilken liste byggeren åbnes på. Uden opts åbnes
+    // 'default' (første liste). En NY liste får et unikt id, så den ikke overskriver
+    // de eksisterende — man kan hæfte flere materiallister på samme tilbud.
+    const handleOpenMaterialList = async (opts = {}) => {
         if (!onOpenMaterialList) return;
-        if (initialLead?.id) { onOpenMaterialList(initialLead); return; }
+        if (initialLead?.id) { onOpenMaterialList(initialLead, opts); return; }
         const lead = await save(false, { keepOpen: true });
-        if (lead?.id) onOpenMaterialList(lead);
+        if (lead?.id) onOpenMaterialList(lead, opts);
     };
 
     // ---- Slet tilbuddet helt (soft-delete via RPC — kun ved redigering af eksisterende) ----
@@ -1321,18 +1344,42 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         <input className="qqb-input" style={input} placeholder="F.eks. 'Nyt tag på Nørrevænget 1'" value={title} onChange={(e) => setTitle(e.target.value)} />
     );
 
+    // Lille tekst-link (glas-stil) til at skifte mellem auto-budget og manuelt budget.
+    const budgetLink = { marginTop: '7px', background: 'none', border: 'none', padding: 0, color: '#2563eb', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' };
     const renderMaterialInputs = () => (
         <>
-            <div ref={coachMaterialRef} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                    <label style={label}>Indkøbspris</label>
-                    <input className="qqb-input" style={input} inputMode="decimal" placeholder="167.080" value={materialCost} onChange={(e) => setMaterialCost(fmtDk(e.target.value))} />
+            {useListsBudget ? (
+                <div ref={coachMaterialRef} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', alignItems: 'start' }}>
+                    <div>
+                        <label style={label}>Materialebudget</label>
+                        <div style={{ ...input, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0f172a', fontWeight: 700 }} title="Summen af dine vedhæftede materiallister">
+                            {kr(listsMaterialTotal)} kr
+                            <span style={{ fontSize: '0.68rem', color: '#0ea5e9', fontWeight: 800, whiteSpace: 'nowrap' }}>fra lister</span>
+                        </div>
+                        <button type="button" onClick={() => { setBudgetFromLists(false); setMaterialCost(fmtDk(String(Math.round(listsMaterialTotal)))); }} style={budgetLink}>Overstyr manuelt</button>
+                    </div>
+                    <div>
+                        <label style={label}>Avance %</label>
+                        <input className="qqb-input" style={input} inputMode="decimal" placeholder="10" value={markup} onChange={(e) => setMarkup(e.target.value)} />
+                    </div>
                 </div>
-                <div>
-                    <label style={label}>Avance %</label>
-                    <input className="qqb-input" style={input} inputMode="decimal" placeholder="10" value={markup} onChange={(e) => setMarkup(e.target.value)} />
-                </div>
-            </div>
+            ) : (
+                <>
+                    <div ref={coachMaterialRef} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                            <label style={label}>Indkøbspris</label>
+                            <input className="qqb-input" style={input} inputMode="decimal" placeholder="167.080" value={materialCost} onChange={(e) => setMaterialCost(fmtDk(e.target.value))} />
+                        </div>
+                        <div>
+                            <label style={label}>Avance %</label>
+                            <input className="qqb-input" style={input} inputMode="decimal" placeholder="10" value={markup} onChange={(e) => setMarkup(e.target.value)} />
+                        </div>
+                    </div>
+                    {listsMaterialTotal > 0 && (
+                        <button type="button" onClick={() => setBudgetFromLists(true)} style={budgetLink}>Brug materiallisternes sum ({kr(listsMaterialTotal)} kr)</button>
+                    )}
+                </>
+            )}
             <div style={resultChip}>
                 <span style={chipLbl}>Materialer i tilbud</span>
                 <span style={{ ...chipVal, color: '#2563eb' }}>{kr(calc.materialSell)} kr</span>
@@ -1363,28 +1410,35 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
         toast.success('PDF fjernet');
     };
 
+    // Kompakt beløbsfelt pr. materialeliste (ekskl. moms). Summen bliver til
+    // materialebudgettet (når "fra lister" er slået til), og markeres som brugt
+    // på sagen, så snart kunden bekræfter tilbuddet.
+    const matAmtInput = { width: '108px', flexShrink: 0, padding: '8px 10px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.85rem', textAlign: 'right', fontWeight: 700, color: '#0f172a', background: '#fff' };
     const renderUploadField = () => (
         <>
-            <label style={{ ...label, marginTop: '14px' }}>Materialeliste (PDF)</label>
-            {/* Allerede gemte PDF'er (fx fra Stark/Bygma) — kan åbnes og fjernes igen */}
+            <label style={{ ...label, marginTop: '14px' }}>Materialelister (PDF)</label>
+            <p style={{ margin: '0 0 10px', fontSize: '0.76rem', color: '#94a3b8', lineHeight: 1.4 }}>Vedhæft én eller flere lister. Skriv beløbet (ekskl. moms) pr. liste — summen bliver til materialebudgettet.</p>
+            {/* Allerede gemte PDF'er (fx fra Stark/Bygma) — kan åbnes, prissættes og fjernes igen */}
             {savedPdfs.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
                     {savedPdfs.map(p => (
                         <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
                             <FileText size={18} color="#dc2626" style={{ flexShrink: 0 }} />
-                            <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, fontSize: '0.9rem', color: '#0f172a', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>{p.name || 'Materialeliste'}</a>
+                            <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, minWidth: 0, fontSize: '0.9rem', color: '#0f172a', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>{p.name || 'Materialeliste'}</a>
+                            <input className="qqb-input" style={matAmtInput} inputMode="decimal" placeholder="beløb" value={p.amount ? fmtDk(String(p.amount)) : ''} onChange={(e) => { const v = num(fmtDk(e.target.value)) || 0; setSavedPdfs(prev => prev.map(x => x.id === p.id ? { ...x, amount: v } : x)); }} />
                             <button onClick={() => setPdfToRemove(p)} title="Fjern PDF" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px', display: 'flex' }}><Trash2 size={16} /></button>
                         </div>
                     ))}
                 </div>
             )}
-            {/* Netop vedhæftede (endnu ikke gemte) PDF'er — kan fjernes igen inden man gemmer. */}
+            {/* Netop vedhæftede (endnu ikke gemte) PDF'er — kan prissættes og fjernes inden man gemmer. */}
             {materialFiles.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
                     {materialFiles.map((f, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
                             <FileText size={18} color="#16a34a" style={{ flexShrink: 0 }} />
-                            <span style={{ flex: 1, fontSize: '0.9rem', color: '#166534', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                            <span style={{ flex: 1, minWidth: 0, fontSize: '0.9rem', color: '#166534', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.file.name}</span>
+                            <input className="qqb-input" style={matAmtInput} inputMode="decimal" placeholder="beløb" value={f.amount ? fmtDk(String(f.amount)) : ''} onChange={(e) => { const v = num(fmtDk(e.target.value)) || 0; setMaterialFiles(prev => prev.map((x, idx) => idx === i ? { ...x, amount: v } : x)); }} />
                             <button onClick={() => setMaterialFiles(prev => prev.filter((_, idx) => idx !== i))} title="Fjern" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><Trash2 size={16} /></button>
                         </div>
                     ))}
@@ -1394,7 +1448,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             <FileDropzone
                 accept="application/pdf,image/*"
                 multiple
-                onFiles={(files) => setMaterialFiles(prev => [...prev, ...files])}
+                onFiles={(files) => setMaterialFiles(prev => [...prev, ...files.map(file => ({ file, amount: 0 }))])}
                 title={(materialFiles.length || savedPdfs.length) ? 'Tilføj flere PDF\'er' : 'Træk PDF hertil eller klik for at vedhæfte'}
             />
         </>
@@ -1432,9 +1486,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 </div>
             )}
             <div style={resultChip}>
-                <span style={chipLbl}>Arbejde i alt</span>
+                <span style={chipLbl}>Arbejde i alt {laborMode === 'hourly' && <span style={{ fontSize: '0.7rem', color: '#d97706', fontWeight: 800 }}>(estimat)</span>}</span>
                 <span style={{ ...chipVal, color: '#d97706' }}>{kr(calc.laborTotal)} kr</span>
             </div>
+            {laborMode === 'hourly' && (
+                <p style={{ margin: '8px 2px 0', fontSize: '0.76rem', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '9px 12px', lineHeight: 1.4 }}>
+                    ⓘ Timeantallet er et <strong>skøn</strong>, ikke en fast pris. Kunden får det tydeligt at vide i tilbuddet og betaler kun for de faktisk brugte timer.
+                </p>
+            )}
 
             {/* Valgfri delopgave-opdeling (byggeprocessen) — bliver til sagens bygge-to-do. */}
             <button type="button" onClick={() => setShowBreakdown(true)} className="qqb-ghost" style={{ width: '100%', marginTop: '10px', padding: '12px', borderRadius: '12px', border: '1px dashed #cbd5e1', background: '#fff', color: '#334155', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px', transition: 'all .15s' }}>
@@ -1805,12 +1864,30 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                     <h3 style={editH}><Package size={18} color="#3b82f6" /> Materialer</h3>
                     {renderMaterialInputs()}
                     {renderUploadField()}
-                    {onOpenMaterialList && (
-                        <button type="button" onClick={handleOpenMaterialList}
-                            style={{ marginTop: '14px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 16px', borderRadius: '12px', border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}>
-                            <Package size={16} /> Generér materialeliste til leverandør
-                        </button>
-                    )}
+                    {onOpenMaterialList && (() => {
+                        const structuredLists = initialLead?.raw_data?.material_lists_meta || [];
+                        return (
+                            <div style={{ marginTop: '14px' }}>
+                                {/* Eksisterende materiallister — klik for at redigere den enkelte (uden at overskrive de andre) */}
+                                {structuredLists.length > 0 && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
+                                        {structuredLists.map(l => (
+                                            <button key={l.id} type="button" onClick={() => handleOpenMaterialList({ listId: l.id, listName: l.name })}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+                                                <Package size={16} color="#3b82f6" style={{ flexShrink: 0 }} />
+                                                <span style={{ flex: 1, minWidth: 0, fontSize: '0.9rem', color: '#0f172a', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.name || 'Materialeliste'}</span>
+                                                <span style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 700, flexShrink: 0 }}>Redigér</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                <button type="button" onClick={() => handleOpenMaterialList(structuredLists.length ? { listId: `list_${Date.now()}`, listName: `Materialeliste ${structuredLists.length + 1}` } : {})}
+                                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 16px', borderRadius: '12px', border: '1px solid #bfdbfe', background: 'linear-gradient(145deg,#eff6ff,#f5f3ff)', color: '#1d4ed8', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}>
+                                    <Package size={16} /> {structuredLists.length ? 'Tilføj endnu en materialeliste' : 'Generér materialeliste til leverandør'}
+                                </button>
+                            </div>
+                        );
+                    })()}
                 </div>
                 <div style={editSection} data-tour="qq-labor">
                     <h3 style={editH}><Hammer size={18} color="#f59e0b" /> Arbejde</h3>

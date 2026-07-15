@@ -404,10 +404,22 @@ export async function buildQuotePdf(quote, carpenter, customer, opts = {}) {
     if (isHourlyQuote) {
         const estParts = [`ca. ${laborHours.toLocaleString('da-DK')} timer`];
         if (laborRate > 0) estParts.push(`à ${kr(laborRate)} kr./time ekskl. moms`);
-        const estimateText = `Dette tilbud er baseret på timepris. Det angivne beløb er et estimat ud fra forventet tidsforbrug (${estParts.join(' ')}). Den endelige pris afregnes efter faktisk medgået tid til den aftalte timepris og kan derfor blive både højere og lavere end estimatet.`;
+        // Fremhæv tydeligt at prisen er et SKØN — ikke en fast pris. En kort, fed
+        // overskrift så kunden ikke misforstår timeantallet som et bindende tal.
+        const estHeader = 'Bemærk: Prisen er et estimat — ikke en fast pris.';
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(...brand);
+        const headerLines = pdf.splitTextToSize(estHeader, right - left);
+        pdf.text(headerLines, left, y);
+        y += headerLines.length * 5 + 1;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(...muted);
+        const estimateText = `Tilbuddet er baseret på timepris. De angivne ${estParts.join(' ')} er vores bedste faglige skøn over tidsforbruget — altså hvad vi forventer opgaven tager, ikke et fast antal timer. Du betaler kun for den tid, der faktisk bruges, til den aftalte timepris, og den endelige pris kan derfor blive både højere og lavere end estimatet.`;
         const estimateLines = pdf.splitTextToSize(estimateText, right - left);
         pdf.text(estimateLines, left, y);
-        y += estimateLines.length * 5 + 1;
+        y += estimateLines.length * 5 + 2;
     }
 
     pdf.setFont('helvetica', 'normal');
