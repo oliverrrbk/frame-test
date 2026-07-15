@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import { ImagePlus, Info, ZoomIn, Copy, Trash2, Plus, ChevronLeft, ChevronRight, Camera } from 'lucide-react';
 import { QUESTIONS, initialCategories } from './questionsConfig';
 import CustomSelect from './CustomSelect';
+import { displayCalcOption } from './calcOptionDisplay';
+import { CALC_DEFAULTS } from './calcDefaults';
 import AudioPlayerButton from './AudioPlayerButton';
 import { supabase } from '../../supabaseClient';
 
@@ -342,6 +344,24 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
         return visible;
     };
 
+    // Smart defaults: forudvælg det mest almindelige svar i dropdowns, så kunden
+    // kan skimme igennem i stedet for at vælge hvert felt. Sætter KUN felter der
+    // er synlige OG endnu ikke rørt (undefined) — respekterer brugerens/gemte valg
+    // og udløser ikke loops (når feltet først har en værdi, springes det over).
+    React.useEffect(() => {
+        const catDefaults = CALC_DEFAULTS[category];
+        if (!catDefaults) return;
+        (QUESTIONS[category] || []).forEach(q => {
+            if (q.type !== 'select') return;
+            const def = catDefaults[q.id];
+            if (def === undefined) return;
+            if (details[q.id] !== undefined) return;
+            if (!isVisible(q.condition)) return;
+            updateDetails(q.id, def);
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [category, details]);
+
     const handleNextStep = () => {
         const questionsForCategory = QUESTIONS[category] || [];
         const visibleQuestions = questionsForCategory.filter(q => isVisible(q.condition));
@@ -479,12 +499,19 @@ const Step2Dynamic = ({ category, details, updateDetails, nextStep, prevStep, qu
                 )}
                 {q.type === 'select' && (
                     <div style={{ position: 'relative' }}>
-                        <CustomSelect 
-                            value={details[q.id] || ''} 
+                        <CustomSelect
+                            value={details[q.id] || ''}
                             onChange={(val) => {
                                 handleInputChange(q.id, val);
                             }}
-                            options={resolvedOptions}
+                            // Visnings-lag: label omskrives ("vi" → "tømreren"/"jeg"),
+                            // men value forbliver den originale gemte streng, så
+                            // pris-motoren + conditions matcher uændret.
+                            options={resolvedOptions.map(o => (
+                                typeof o === 'string'
+                                    ? { value: o, label: displayCalcOption(o) }
+                                    : { ...o, value: o.value !== undefined ? o.value : o.label, label: displayCalcOption(o.label !== undefined ? o.label : String(o.value)) }
+                            ))}
                             placeholder="-- Vælg en mulighed --"
                             style={{ width: '100%' }}
                         />

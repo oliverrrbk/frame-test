@@ -1025,7 +1025,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
                 laborHours += dispHours;
                 bArr.push(`Standard tillæg: Nedbrydning og demontering af eksisterende terrasse (+${dispHours.toFixed(1)} arbejdstimer)`);
                 
-                if (d.disposal === 'Ja, tømreren skal afmontere og bortskaffe den') {
+                if (d.disposal.toLowerCase().includes('bortskaffe')) {
                     let threshold = formula.containerThreshold || 30;
                     if (threshold > 0) {
                         let containerCount = Math.max(1, Math.ceil(numericAmount / threshold));

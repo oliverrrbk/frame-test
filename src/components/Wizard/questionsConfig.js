@@ -656,12 +656,43 @@ export const QUESTIONS = {
             type: 'visual_select',
             label: 'Hvilket materiale skal rækværket være i?',
             condition: (d) => d.railing === 'Ja, vi skal bygge rækværk',
-            options: [
-                { label: 'Glas rækværk', img: '/images/railing_glass.png' },
-                { label: 'Træ rækværk', img: '/images/railing_wood.png' },
-                { label: 'Rustfrit stål rækværk', img: '/images/railing_steel.png' },
-                { label: 'Blanding af træ og rustfrit stål', img: '/images/railing_wood_steel.png' }
-            ]
+            options: (d) => {
+                const mat = d.material || '';
+                
+                let glassImg = '/images/railing_glass.png';
+                let woodImg = '/images/railing_wood.png';
+                let steelImg = '/images/railing_steel.png';
+                let mixImg = '/images/railing_wood_steel.png';
+
+                if (mat === 'Trykimprægneret') {
+                    glassImg = '/images/railing_glass_trykimprægneret.png';
+                    woodImg = '/images/railing_wood_trykimprægneret.png';
+                    steelImg = '/images/railing_steel_trykimprægneret.png';
+                    mixImg = '/images/railing_mix_trykimprægneret.png';
+                } else if (mat === 'Thermowood') {
+                    glassImg = '/images/railing_glass_thermowood.png';
+                    woodImg = '/images/railing_wood_thermowood.png';
+                    steelImg = '/images/railing_steel_thermowood.png';
+                    mixImg = '/images/railing_mix_thermowood.png';
+                } else if (mat === 'Cedertræ / Hardwood') {
+                    glassImg = '/images/railing_glass_cedar.png';
+                    woodImg = '/images/railing_wood_cedar.png';
+                    steelImg = '/images/railing_steel_cedar.png';
+                    mixImg = '/images/railing_mix_cedar.png';
+                } else if (mat === 'Komposit') {
+                    glassImg = '/images/railing_glass_komposit.png';
+                    woodImg = '/images/railing_wood_komposit.png';
+                    steelImg = '/images/railing_steel_komposit.png';
+                    mixImg = '/images/railing_mix_komposit.png';
+                }
+
+                return [
+                    { label: 'Glas rækværk', img: glassImg },
+                    { label: 'Træ rækværk', img: woodImg },
+                    { label: 'Rustfrit stål rækværk', img: steelImg },
+                    { label: 'Blanding af træ og rustfrit stål', img: mixImg }
+                ];
+            }
         },
         { 
             id: 'railingMeters', 
