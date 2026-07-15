@@ -134,6 +134,7 @@ export const MODULES = [
     { key: 'customers',    label: 'Kunder',                description: 'Kunde-bibliotek med genbrugelige kundekort.' },
     { key: 'quotes',       label: 'Tilbud & Forespørgsler', description: 'Indbakke, tilbud, forespørgsler og tilbudskladder.' },
     { key: 'cases',        label: 'Sager & Ordrestyring',   description: 'Igangværende sager, byggepladser og opgaver.' },
+    { key: 'todo',         label: 'Bygge To-Do',            description: 'Bygge-tjekliste og kvalitetssikring (KS) på den enkelte sag.' },
     { key: 'calendar',     label: 'Kalender',               description: 'Planlægning af sager og aftaler.' },
     { key: 'chat',         label: 'Intern Chat',            description: 'Beskeder mellem medarbejdere.' },
     { key: 'timesheet',    label: 'Tid & Løn',              description: 'Timeregistrering og løn-overblik (kræver Hold).' },

@@ -14,7 +14,7 @@ import AudioPlayerButton from '../Wizard/AudioPlayerButton';
 import FrameSelect from '../ui/FrameSelect';
 import BilagManager from './BilagManager';
 import { SubcontractorModal } from './Subcontractors';
-import { getFeatures } from '../../utils/features';
+import { getFeatures, getModules } from '../../utils/features';
 import { isReverseChargeLead } from '../../utils/caseFinance';
 import ProfileCard from './ProfileCard';
 import { fetchPayrollSettings, isDateLocked, formatDa, getEffectiveLockedUntil } from '../../utils/payroll';
@@ -714,6 +714,17 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
 
     const [activeSubTab, setActiveSubTab] = useState(['worker', 'apprentice', 'sales'].includes(profile?.role) ? 'timesheet' : 'todo'); // 'todo', 'materials', 'logs', 'timesheet', 'finance'
     const tabContentRef = useRef(null);
+
+    // Per-firma modul-synlighed (rent visnings-lag). Skjuler sag-underfaner hvis
+    // modulet er slukket i Bizon Admin — data gemmes og ligger urørt bagved.
+    const caseModules = getModules(carpenterProfile);
+
+    // Hvis den aktive underfane er slukket via modul, så flyt til Byggeproces
+    // (altid synlig), ellers ville man stå på en tom visning.
+    useEffect(() => {
+        if (activeSubTab === 'drawings' && caseModules.drawings === false) setActiveSubTab('logs');
+        else if (activeSubTab === 'todo' && caseModules.todo === false) setActiveSubTab('logs');
+    }, [caseModules.drawings, caseModules.todo, activeSubTab]);
 
     // --- DND KIT SENSORS OG HANDLER ---
     const sensors = useSensors(
@@ -4157,13 +4168,13 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                                         {/* MODERN HORIZONTAL TABS (2026 DESIGN) */}
                     {(() => {
                         const caseTabs = [
-                            { id: 'todo', label: selectedCase.status === 'Afbrudt Sag' ? 'Bygge To-Do (Låst)' : 'Bygge To-Do (KS)', mobileLabel: 'To-Do', icon: <CheckSquare size={isMobile ? 22 : 18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5', show: true },
+                            { id: 'todo', label: selectedCase.status === 'Afbrudt Sag' ? 'Bygge To-Do (Låst)' : 'Bygge To-Do (KS)', mobileLabel: 'To-Do', icon: <CheckSquare size={isMobile ? 22 : 18} />, color: '#64748b', activeColor: '#10b981', activeBg: '#ecfdf5', show: caseModules.todo !== false },
                             { id: 'materials', label: 'Materialer & Indkøb', mobileLabel: 'Materialer', icon: <PackageCheck size={isMobile ? 22 : 18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' && getFeatures(carpenterProfile?.business_type).materials },
                             { id: 'logs', label: 'Byggeproces', mobileLabel: 'Proces', icon: <ClipboardList size={isMobile ? 22 : 18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4', show: true },
                             { id: 'timesheet', label: 'Timeregistrering', mobileLabel: 'Timer', icon: <Clock size={isMobile ? 22 : 18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
                             { id: 'invoices', label: 'Bilag', mobileLabel: 'Bilag', icon: <Receipt size={isMobile ? 22 : 18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
                             { id: 'extra-work', label: selectedCase.status === 'Afbrudt Sag' ? 'Aftalesedler (Låst)' : 'Aftalesedler', mobileLabel: 'Aftaler', icon: <PenTool size={isMobile ? 22 : 18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
-                            { id: 'drawings', label: 'Tegninger', mobileLabel: 'Tegninger', icon: <FileImage size={isMobile ? 22 : 18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: true }
+                            { id: 'drawings', label: 'Tegninger', mobileLabel: 'Tegninger', icon: <FileImage size={isMobile ? 22 : 18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: caseModules.drawings !== false }
                         ].filter(tab => tab.show);
 
                         const tabContent = (
@@ -4312,7 +4323,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                     <div ref={tabContentRef} data-tour="case-tab-content" style={{ padding: '8px 0' }}>
                         
                         {/* TAB 1: TO-DO / CHECKLIST */}
-                        {activeSubTab === 'todo' && (
+                        {activeSubTab === 'todo' && caseModules.todo !== false && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', pointerEvents: selectedCase.status === 'Afbrudt Sag' ? 'none' : 'auto', opacity: selectedCase.status === 'Afbrudt Sag' ? 0.7 : 1, backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e8e6e1' }}>
                                 {!isMobile && (
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -5309,7 +5320,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                         )}
 
                         {/* TAB 7: TEGNINGER & SKITSER */}
-                        {activeSubTab === 'drawings' && (
+                        {activeSubTab === 'drawings' && caseModules.drawings !== false && (
                             <div className="case-tab-content">
                                 <CaseDrawingsTab
                                     selectedCase={selectedCase}
