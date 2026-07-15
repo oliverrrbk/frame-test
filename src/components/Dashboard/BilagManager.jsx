@@ -273,7 +273,7 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
         <div className="glass-panel-tab" style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ margin: 0, fontSize: isMobile ? '1.4rem' : '1.1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Building2 size={isMobile ? 22 : 18} color="#d97706" /> Fakturaer & Udgifter (Bilag)
+                    <Building2 size={isMobile ? 22 : 18} color="#d97706" /> Bilag & Regnskab
                 </h3>
                 <div style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
                     {supplierInvoices.length} bilag
@@ -281,8 +281,8 @@ const BilagManager = ({ lead, profile, onUpdateLead, isMobile = false, onGoToInv
             </div>
             <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '20px', lineHeight: '1.5' }}>
                 {isMobile
-                    ? 'Registrér udgifter og fakturaer på sagen — vælg den rigtige kategori.'
-                    : 'Her registrerer du de udgifter og fakturaer du modtager på denne sag. Husk at vælge den rigtige kategori, så materialebudgettet stemmer.'}
+                    ? 'Alle udgifter og fakturaer på sagen — materialer, underentreprenør og diverse. Materialefakturaer kan også lægges under Materialer & Indkøb.'
+                    : 'Her samler du alle udgifter og fakturaer på sagen — materialer, underentreprenør og diverse — klar til bogføring. Materialefakturaer kan du også lægge direkte under Materialer & Indkøb; de vises begge steder. Husk at vælge den rigtige kategori, så materialebudgettet stemmer.'}
             </p>
 
             <div style={{ marginBottom: '20px' }}>

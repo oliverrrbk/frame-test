@@ -577,7 +577,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
             await persistInvoices(cur => [...cur, newInv]);
             setMatForm({ name: '', amount: '', file: null, file_name: '' });
             setShowAddMat(false);
-            toast.success('Materialeliste tilføjet — tæller i budgettet og ligger under Bilag');
+            toast.success('Materialefaktura tilføjet — tæller i budgettet og ligger også under Bilag & Regnskab');
         } catch (e) {
             toast.error(friendlyError(e, 'Kunne ikke gemme. Prøv igen.'));
         } finally {
@@ -651,7 +651,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Receipt size={18} /></div>
                 <div>
                     <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.98rem' }}>Materialelister & indkøb (bilag)</div>
-                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Beløbene tæller i forbruget — posterne ligger også under Bilag</div>
+                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Beløbene tæller i forbruget — posterne ligger også under Bilag &amp; Regnskab</div>
                 </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -692,8 +692,8 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '24px 24px 0' }}>
                     <div style={{ width: '46px', height: '46px', borderRadius: '13px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Receipt size={23} color="#2563eb" /></div>
                     <div style={{ flex: 1 }}>
-                        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Tilføj materialeliste</h3>
-                        <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Vedhæft PDF'en, giv den et navn og et beløb</p>
+                        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Upload materialefaktura</h3>
+                        <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>Vedhæft fakturaen (PDF/billede), giv den et navn og et beløb</p>
                     </div>
                     <button onClick={() => !savingMat && setShowAddMat(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', flexShrink: 0 }}><X size={18} /></button>
                 </div>
@@ -703,11 +703,11 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                         onFiles={(files) => { const f = files[0]; if (f) setMatForm({ ...matForm, file: f, file_name: f.name }); }}
                         selectedName={matForm.file ? matForm.file_name : null}
                         title="Træk PDF/billede hertil eller klik"
-                        hint="Valgfrit — fx listen fra Davidsen"
+                        hint="Valgfrit — fx fakturaen fra Davidsen"
                     />
                     <div>
                         <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Navn</label>
-                        <input autoFocus value={matForm.name} onChange={(e) => setMatForm({ ...matForm, name: e.target.value })} placeholder="fx Materialeliste – Davidsen"
+                        <input autoFocus value={matForm.name} onChange={(e) => setMatForm({ ...matForm, name: e.target.value })} placeholder="fx Faktura fra Davidsen"
                             style={{ width: '100%', boxSizing: 'border-box', padding: '13px 14px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '1rem', outline: 'none' }}
                             onFocus={e => e.target.style.borderColor = '#3b82f6'} onBlur={e => e.target.style.borderColor = '#cbd5e1'} />
                     </div>
@@ -730,7 +730,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                         <button onClick={() => setShowAddMat(false)} disabled={savingMat} style={{ flex: '0 0 auto', padding: '14px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>Annullér</button>
                         <button onClick={handleSaveMatInvoice} disabled={savingMat || !matForm.name.trim()}
                             style={{ flex: 1, padding: '14px', borderRadius: '12px', border: 'none', background: matForm.name.trim() ? '#0f172a' : '#cbd5e1', color: '#fff', fontWeight: 700, fontSize: '1rem', cursor: matForm.name.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
-                            {savingMat ? <Loader2 size={18} className="spin" /> : <Check size={18} />} Gem materialeliste
+                            {savingMat ? <Loader2 size={18} className="spin" /> : <Check size={18} />} Gem materialefaktura
                         </button>
                     </div>
                 </div>
@@ -779,7 +779,7 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                             {canManageLists && (
                                 <button className="ml-empty-btn" onClick={(e) => { e.stopPropagation(); setShowAddMat(true); }}
                                     style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 24px', borderRadius: '13px', border: '2px dashed #cbd5e1', background: '#fff', color: '#475569', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer' }}>
-                                    <Upload size={18} /> Upload PDF som materialeliste
+                                    <Upload size={18} /> Upload materialefaktura
                                 </button>
                             )}
                         </div>
@@ -882,10 +882,18 @@ const MaterialList = ({ lead, profile, onUpdate, isLead = false, onAddDeliveryTo
                                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.color = '#6d28d9'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569'; }}
                             >
-                                <Upload size={18} /> Tilføj materialeliste (PDF + beløb)
+                                <Upload size={18} /> Upload materialefaktura
                             </button>
                         )}
                     </div>
+                )}
+
+                {/* Kobling til Bilag-fanen gjort eksplicit: materialefakturaer hører til her,
+                    men lander i samme datasæt som Bilag & Regnskab. */}
+                {!isLead && canManageLists && (
+                    <p style={{ margin: '-4px 2px 0', fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                        Materialefakturaer, du uploader her, tæller i budgettet og vises også under <strong style={{ color: '#64748b', fontWeight: 700 }}>Bilag &amp; Regnskab</strong> — du behøver kun uploade dem ét sted.
+                    </p>
                 )}
 
                 {/* Budget (kun i sagen, ikke på forespørgsel) */}

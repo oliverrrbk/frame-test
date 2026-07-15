@@ -639,7 +639,7 @@ const CASES_TOUR_STEPS = [
     { sel: '[data-tour="case-tab-timesheet"]', placement: 'bottom', subTab: 'timesheet', eyebrow: 'Fane 4', title: 'Timeregistrering', body: 'Registrér timer på sagen — klar til løn og fakturering.' },
     // De sidste tre faner vises kun (skifter ikke fane), så vi ikke loader fra
     // databasen på prøvesagen — man kan altid åbne dem på en rigtig sag.
-    { sel: '[data-tour="case-tab-invoices"]', placement: 'bottom', eyebrow: 'Fane 5', title: 'Bilag', body: 'Saml kvitteringer og bilag på sagen — klar til bogføring og fakturering.' },
+    { sel: '[data-tour="case-tab-invoices"]', placement: 'bottom', eyebrow: 'Fane 5', title: 'Bilag & Regnskab', body: 'Saml alle udgifter og fakturaer på sagen — materialer, underentreprenør og diverse — klar til bogføring og fakturering.' },
     { sel: '[data-tour="case-tab-extra-work"]', placement: 'bottom', eyebrow: 'Fane 6', title: 'Aftalesedler', body: 'Dokumentér ekstraarbejde som aftalesedler, så du altid kan fakturere det, der kommer til undervejs.' },
     { sel: '[data-tour="case-tab-drawings"]', placement: 'bottom', eyebrow: 'Fane 7', title: 'Tegninger', body: 'Hav tegninger og plantegninger lige ved hånden — knyttet direkte til sagen.' },
 ];
@@ -4172,7 +4172,7 @@ export default function CaseManagement({ targetCaseId, clearTargetCase, leads = 
                             { id: 'materials', label: 'Materialer & Indkøb', mobileLabel: 'Materialer', icon: <PackageCheck size={isMobile ? 22 : 18} />, color: '#3b82f6', activeColor: '#3b82f6', activeBg: '#eff6ff', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' && getFeatures(carpenterProfile?.business_type).materials },
                             { id: 'logs', label: 'Byggeproces', mobileLabel: 'Proces', icon: <ClipboardList size={isMobile ? 22 : 18} />, color: '#16a34a', activeColor: '#16a34a', activeBg: '#f0fdf4', show: true },
                             { id: 'timesheet', label: 'Timeregistrering', mobileLabel: 'Timer', icon: <Clock size={isMobile ? 22 : 18} />, color: '#d946ef', activeColor: '#d946ef', activeBg: '#fdf4ff', show: true },
-                            { id: 'invoices', label: 'Bilag', mobileLabel: 'Bilag', icon: <Receipt size={isMobile ? 22 : 18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
+                            { id: 'invoices', label: 'Bilag & Regnskab', mobileLabel: 'Bilag', icon: <Receipt size={isMobile ? 22 : 18} />, color: '#f59e0b', activeColor: '#f59e0b', activeBg: '#fef3c7', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
                             { id: 'extra-work', label: selectedCase.status === 'Afbrudt Sag' ? 'Aftalesedler (Låst)' : 'Aftalesedler', mobileLabel: 'Aftaler', icon: <PenTool size={isMobile ? 22 : 18} />, color: '#8b5cf6', activeColor: '#8b5cf6', activeBg: '#f5f3ff', show: profile?.role !== 'worker' && profile?.role !== 'apprentice' },
                             { id: 'drawings', label: 'Tegninger', mobileLabel: 'Tegninger', icon: <FileImage size={isMobile ? 22 : 18} />, color: '#0ea5e9', activeColor: '#0ea5e9', activeBg: '#e0f2fe', show: caseModules.drawings !== false }
                         ].filter(tab => tab.show);
