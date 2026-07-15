@@ -169,6 +169,7 @@ export const MATERIAL_INDEX = {
         'Troldtekt (akustikloft)': 340,               // 350-500 typisk
         'Nedhængt loft (systemloft)': 450,
         'Akustikpaneler (lameller)': 700,             // Eg-lameller 600-900
+        'Akustikpaneler (glatte plader)': 650,        // Glatte akustikplader, lidt billigere end lameller
         'Default': 350,
         // Nye tillægsmaterialer
         'Forskalling': 50,
@@ -369,7 +370,8 @@ export const WORK_FORMULAS = {
             'Troldtekt (akustikloft)': 0.8,
             'Nedhængt loft (systemloft)': 0.8,
             'Træloft (listeloft/paneler/rustikloft)': 0.9,
-            'Akustikpaneler (lameller)': 0.9
+            'Akustikpaneler (lameller)': 0.9,
+            'Akustikpaneler (glatte plader)': 0.9
         },
         disposalHours: 0.3, // Nedtagning pr m2
         // Lofts-tillæg justeret efter at de tidligere compoundede til 2,4 t/m² på fuld pakke

@@ -977,7 +977,7 @@ export const performCalculation = async (projectData, customerDetails, dbSetting
             } else if (hasFloorHeating) {
                 // Eksisterende støbt gulvvarme: kun varmeledende specialunderlag (lav isolans) kræves.
                 laborHours += numericAmount * 0.05;
-                if (!userSuppliesMaterials) materialCost += (numericAmount * (indexCat['Gulvvarme specialunderlag (pr m2)'] || 90)) * dbSettings.material_markup;
+                if (!userSuppliesMaterials) materialCost += (numericAmount * (indexCat['Gulvvarme (Specialunderlag)'] || 80)) * dbSettings.material_markup;
                 bArr.push(`Tillæg: Varmeledende specialunderlag til flydende gulv oven på eksisterende støbt gulvvarme`);
             }
 

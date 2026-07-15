@@ -1927,6 +1927,7 @@ const Dashboard = () => {
                 { category: 'ceilings', name: 'Troldtekt (akustikloft)', price: 380, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Nedhængt loft (systemloft)', price: 450, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Akustikpaneler (lameller)', price: 750, carpenter_id: targetId },
+                { category: 'ceilings', name: 'Akustikpaneler (glatte plader)', price: 650, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Forskalling', price: 50, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Dampspærre inkl tape', price: 35, carpenter_id: targetId },
                 { category: 'ceilings', name: 'Isolering (50-100mm)', price: 85, carpenter_id: targetId },
