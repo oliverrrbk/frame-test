@@ -442,8 +442,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     const [markup, setMarkup] = useState(mq0.materialMarkupPct != null ? String(mq0.materialMarkupPct) : '10');             // avance % (standard 10 %)
     // Materialebudgettet kan enten komme AUTOMATISK fra summen af de vedhæftede
     // materiallister (hver liste har sit eget beløb) eller sættes manuelt (Indkøbspris).
-    // Default = fra listerne, medmindre tømreren bevidst overstyrer.
-    const [budgetFromLists, setBudgetFromLists] = useState(mq0.materialBudgetFromLists !== false);
+    // Nye tilbud: default = fra listerne, medmindre tømreren bevidst overstyrer.
+    // Genåbning af et gemt tilbud: respektér den gemte kilde EKSPLICIT — kun "fra lister",
+    // hvis det blev gemt sådan; ellers bruges den gemte indkøbspris (mq0.materialCost).
+    // Så viser genåbningen præcis det, der blev sendt — også for ældre tilbud gemt før
+    // dette felt fandtes (som ellers fejlagtigt skiftede til listernes sum).
+    const [budgetFromLists, setBudgetFromLists] = useState(
+        isEditing ? mq0.materialBudgetFromLists === true : (mq0.materialBudgetFromLists !== false)
+    );
     // Arbejde
     const [laborMode, setLaborMode] = useState(mq0.laborMode || 'fixed');    // 'fixed' | 'hourly'
     const [laborFixed, setLaborFixed] = useState(mq0.laborFixed ? String(mq0.laborFixed) : '');
@@ -904,7 +910,16 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     // Delopgaver med timer prissættes pr. mandetime — så snart man tilføjer timer,
     // skifter vi fra fast pris til timepris, så beløbet (mandetimer × timepris) rent
     // faktisk ryger med i tilbuddet. Vælger man bagefter selv fast pris igen, respekteres det.
+    //
+    // MEN: ved genåbning af et gemt/sendt tilbud må vi ALDRIG overskrive den gemte
+    // pris-tilstand. Et tilbud sendt som fast pris skal genåbnes som fast pris — ellers
+    // ville delopgave-timerne pludselig blive ganget ind i prisen (timer × timepris) og
+    // vise et helt andet, ofte langt højere, beløb end det kunden faktisk fik. Derfor
+    // springer vi auto-skiftet over på første kørsel, når vi redigerer et eksisterende
+    // tilbud; det gælder kun, når man aktivt tilføjer timer i denne session.
+    const skipInitialLaborFlip = useRef(isEditing);
     useEffect(() => {
+        if (skipInitialLaborFlip.current) { skipInitialLaborFlip.current = false; return; }
         if (breakdownManHours > 0 && laborMode === 'fixed') setLaborMode('hourly');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [breakdownManHours]);
