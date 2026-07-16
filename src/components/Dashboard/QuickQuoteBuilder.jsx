@@ -379,10 +379,31 @@ const PREVIEW_CSS = `
   .qqb-spin{animation:qqbspin .8s linear infinite;}
   @keyframes qqbrec{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.8);}}
   .qqb-rec{animation:qqbrec 1s ease-in-out infinite;}
+  /* Send-overlay (fuldskærm, midt på skærmen) */
+  @keyframes qqbSendCardIn{from{opacity:0;transform:translateY(10px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+  @keyframes qqbSendNudge{0%,100%{transform:translate(0,0);}50%{transform:translate(2px,-2px);}}
+  @keyframes qqbCheckPop{0%{opacity:0;transform:scale(.5);}70%{opacity:1;transform:scale(1.12);}100%{opacity:1;transform:scale(1);}}
+  @keyframes qqbCheckDraw{to{stroke-dashoffset:0;}}
+  .qqb-send-overlay{position:fixed;inset:0;z-index:100200;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,0.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);animation:qqbFade .3s ease;}
+  .qqb-send-card{width:300px;max-width:100%;background:#fff;border-radius:22px;padding:34px 28px 28px;text-align:center;box-shadow:0 24px 60px -12px rgba(15,23,42,0.4);animation:qqbSendCardIn .34s cubic-bezier(.16,1,.3,1);}
+  .qqb-send-spinwrap{position:relative;width:88px;height:88px;margin:0 auto 20px;}
+  .qqb-send-ring{width:100%;height:100%;display:block;}
+  .qqb-send-ring .arc{transform-origin:center;animation:qqbspin .9s linear infinite;}
+  .qqb-send-glyph{position:absolute;inset:0;display:grid;place-items:center;color:#059669;}
+  .qqb-send-glyph svg{animation:qqbSendNudge 1.4s ease-in-out infinite;}
+  .qqb-send-check{width:72px;height:72px;border-radius:50%;background:linear-gradient(145deg,#10b981,#059669);display:grid;place-items:center;box-shadow:0 12px 30px rgba(16,185,129,0.4);animation:qqbCheckPop .4s cubic-bezier(.16,1,.3,1);}
+  .qqb-send-check path{stroke-dasharray:24;stroke-dashoffset:24;animation:qqbCheckDraw .4s .12s ease forwards;}
+  .qqb-send-card h3{margin:0 0 6px;font-size:1.18rem;font-weight:800;letter-spacing:-.01em;color:#0f172a;}
+  .qqb-send-card p{margin:0;font-size:.88rem;color:#64748b;line-height:1.5;}
+  @media (prefers-reduced-motion: reduce){.qqb-send-ring .arc,.qqb-send-glyph svg,.qqb-send-check,.qqb-send-check path,.qqb-send-card,.qqb-send-overlay{animation:none;}}
 `;
 
 export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCancel, onComplete, onDeleted, initialLead = null, draftCreator = null, onOpenMaterialList = null, onDraftSaved = null }) {
     const [busy, setBusy] = useState(false);
+    // Fuldskærms-overlay ved AFSENDELSE (ikke ved kladde-gem): null | 'sending' | 'done'.
+    // 'sending' viser en loading-cirkel midt på skærmen; 'done' skifter til et grønt
+    // flueben et kort øjeblik, før editoren lukkes.
+    const [sendPhase, setSendPhase] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState(false);
     // Valgfri: send kunden en kort besked om at tilbuddet er trukket tilbage (kun ved sendte tilbud).
     const [notifyOnDelete, setNotifyOnDelete] = useState(false);
@@ -1143,6 +1164,9 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
             return toast.error('Udfyld en gyldig email for at sende tilbuddet.');
         }
         setBusy(true);
+        // Ægte afsendelse (ikke kladde-gem): vis loading-overlay midt på skærmen.
+        const isRealSend = sendToCustomer && !opts.keepOpen;
+        if (isRealSend) setSendPhase('sending');
         // Genbrug det eksisterende quote_token ved redigering, så kundens link forbliver gyldigt.
         const quoteToken = initialLead?.quote_token || uid();
         try {
@@ -1286,11 +1310,19 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 toast.success('Tilbuddet er gemt som kladde.');
             } else {
                 toast.success(sendToCustomer ? (wasSent ? 'Opdateret tilbud sendt til kunden! 🎉' : 'Tilbuddet er sendt til kunden! 🎉') : 'Kladden er gemt.');
+                if (isRealSend) {
+                    // Vis "Tilbud sendt!"-fluebenet et kort øjeblik, før editoren lukkes.
+                    setSendPhase('done');
+                    setBusy(false);
+                    setTimeout(() => { onComplete && onComplete(lead); }, 1300);
+                    return lead;
+                }
                 onComplete && onComplete(lead);
             }
             return lead;
         } catch (e) {
             console.error('Kunne ikke gemme/sende tilbud:', e);
+            setSendPhase(null);
             toast.error(friendlyError(e, 'Kunne ikke gemme tilbuddet. Prøv igen.'));
         } finally {
             setBusy(false);
@@ -2002,6 +2034,44 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                 <style>{PREVIEW_CSS}</style>
                 {/* Fanger musen under træk, så iframes ikke "stjæler" events og laver lag */}
                 {resizing && <div style={{ position: 'fixed', inset: 0, zIndex: 100060, cursor: 'col-resize' }} />}
+
+                {/* Send-overlay: loading-cirkel midt på skærmen mens tilbuddet sendes,
+                    og et grønt flueben når det er sendt. Blokerer interaktion imens. */}
+                {sendPhase && (
+                    <div className="qqb-send-overlay" role="status" aria-live="polite">
+                        <div className="qqb-send-card">
+                            <div className="qqb-send-spinwrap">
+                                {sendPhase === 'sending' ? (
+                                    <>
+                                        <svg className="qqb-send-ring" viewBox="0 0 100 100">
+                                            <defs>
+                                                <linearGradient id="qqbSendGrad" x1="0" y1="0" x2="1" y2="1">
+                                                    <stop offset="0" stopColor="#10b981" />
+                                                    <stop offset="1" stopColor="#059669" />
+                                                </linearGradient>
+                                            </defs>
+                                            <circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" strokeWidth="8" />
+                                            <circle className="arc" cx="50" cy="50" r="42" fill="none" stroke="url(#qqbSendGrad)" strokeWidth="8" strokeLinecap="round" strokeDasharray="80 184" />
+                                        </svg>
+                                        <div className="qqb-send-glyph"><Send size={30} /></div>
+                                    </>
+                                ) : (
+                                    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+                                        <div className="qqb-send-check">
+                                            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            <h3>{sendPhase === 'sending' ? 'Sender tilbud…' : 'Tilbud sendt!'}</h3>
+                            <p>
+                                {sendPhase === 'sending'
+                                    ? `Sender til ${(customer.name || '').trim().split(/\s+/)[0] || 'kunden'} og gemmer på sagen — vent et øjeblik.`
+                                    : `${(customer.name || '').trim().split(/\s+/)[0] || 'Kunden'} har fået tilbuddet på mail.`}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* "Fortsæt hvor du slap?" — vises hvis et tidligere, ugemt tilbud blev fundet i localStorage. */}
                 {restorePrompt && (() => {
