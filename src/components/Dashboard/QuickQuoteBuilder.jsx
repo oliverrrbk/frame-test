@@ -51,6 +51,15 @@ const fmtDk = (raw) => {
     const intPart = parts[0].replace(/[^\d]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     return parts.length > 1 ? `${intPart},${parts[1].replace(/[^\d]/g, '')}` : intPart;
 };
+// Gemt TAL → dansk input-tekst: 17950.03 → "17.950,03". VIGTIGT: String(17950.03) giver
+// "17950.03" med punktum som decimaltegn, som num()/fmtDk() fejllæser som tusindtals-
+// separator (→ 1.795.003). Det gangede beløb med decimaler ×100 ved genåbning af et gemt
+// tilbud. Brug ALTID denne, når et gemt tal skal ind i et beløbs-/tal-inputfelt.
+const numToInput = (n) => {
+    if (n == null || n === '') return '';
+    const v = Number(n);
+    return Number.isFinite(v) ? v.toLocaleString('da-DK', { maximumFractionDigits: 2 }) : '';
+};
 
 // ---- Rich-text helpers til arbejdsbeskrivelsen ----
 const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -459,7 +468,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     useEffect(() => { if (coachHintStep >= 0) markCoachSeen('quick_hints'); }, [coachHintStep]);
 
     // Materialer
-    const [materialCost, setMaterialCost] = useState(mq0.materialCost ? String(mq0.materialCost) : '');   // indkøbspris ekskl. moms
+    const [materialCost, setMaterialCost] = useState(mq0.materialCost ? numToInput(mq0.materialCost) : '');   // indkøbspris ekskl. moms
     const [markup, setMarkup] = useState(mq0.materialMarkupPct != null ? String(mq0.materialMarkupPct) : '10');             // avance % (standard 10 %)
     // Materialebudgettet kan enten komme AUTOMATISK fra summen af de vedhæftede
     // materiallister (hver liste har sit eget beløb) eller sættes manuelt (Indkøbspris).
@@ -473,15 +482,15 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
     );
     // Arbejde
     const [laborMode, setLaborMode] = useState(mq0.laborMode || 'fixed');    // 'fixed' | 'hourly'
-    const [laborFixed, setLaborFixed] = useState(mq0.laborFixed ? String(mq0.laborFixed) : '');
-    const [laborRate, setLaborRate] = useState(String(mq0.laborRate || carpenter?.hourly_rate || carpenter?.raw_data?.hourly_rate || '550'));
-    const [laborHours, setLaborHours] = useState(mq0.laborHours ? String(mq0.laborHours) : '');
+    const [laborFixed, setLaborFixed] = useState(mq0.laborFixed ? numToInput(mq0.laborFixed) : '');
+    const [laborRate, setLaborRate] = useState(numToInput(mq0.laborRate || carpenter?.hourly_rate || carpenter?.raw_data?.hourly_rate || 550));
+    const [laborHours, setLaborHours] = useState(mq0.laborHours ? numToInput(mq0.laborHours) : '');
     // Valgfri delopgave-opdeling (byggeprocessen) — bliver til sagens bygge-to-do.
     // Fyldes den ud i timepris-tilstand, STYRER summen af mandetimer tilbuddets timeantal.
     const [breakdown, setBreakdown] = useState(() => initialLead?.raw_data?.checklist || []);
     const [showBreakdown, setShowBreakdown] = useState(false);
     // Tillæg + arbejdsbeskrivelse (rich-text)
-    const [extras, setExtras] = useState((mq0.extras && mq0.extras.length) ? mq0.extras.map(e => ({ id: uid(), desc: e.desc || '', amount: e.amount != null ? String(e.amount) : '' })) : [{ id: uid(), desc: '', amount: '' }]);
+    const [extras, setExtras] = useState((mq0.extras && mq0.extras.length) ? mq0.extras.map(e => ({ id: uid(), desc: e.desc || '', amount: e.amount != null ? numToInput(e.amount) : '' })) : [{ id: uid(), desc: '', amount: '' }]);
     const [workDescHtml, setWorkDescHtml] = useState(mq0.workHtml || '');
     const workEditorRef = useRef(null);
     // Indtal arbejdsbeskrivelsen — samme danske transskribering + fagterm-rettelse som
@@ -924,8 +933,14 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
 
     // Har brugeren lavet delopgaver med timer, styrer summen af mandetimer (timer × mand)
     // tilbuddets timeantal i timepris-tilstand — ét facit, ingen dobbelt-indtastning.
+    //
+    // MEN ved genåbning af et gemt/sendt tilbud: brug de GEMTE timer (mq0.laborHours),
+    // indtil brugeren selv rører delopgaverne i denne session. Delopgave-listen bliver
+    // til sagens bygge-to-do og kan ændre sig efter afsendelse (timer lægges på, opgaver
+    // justeres) — den må ikke i stilhed omskrive prisen på det tilbud, kunden fik.
+    const breakdownTouched = useRef(false);
     const breakdownManHours = useMemo(() => totalManHours(breakdown), [breakdown]);
-    const breakdownDrivesHours = laborMode === 'hourly' && breakdownManHours > 0;
+    const breakdownDrivesHours = laborMode === 'hourly' && breakdownManHours > 0 && (!isEditing || breakdownTouched.current);
     const effLaborHours = breakdownDrivesHours ? breakdownManHours : num(laborHours);
 
     // Delopgaver med timer prissættes pr. mandetime — så snart man tilføjer timer,
@@ -1472,7 +1487,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                         <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
                             <FileText size={18} color="#dc2626" style={{ flexShrink: 0 }} />
                             <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, minWidth: 0, fontSize: '0.9rem', color: '#0f172a', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>{p.name || 'Materialeliste'}</a>
-                            <input className="qqb-input" style={matAmtInput} inputMode="decimal" placeholder="beløb" value={p.amount ? fmtDk(String(p.amount)) : ''} onChange={(e) => { const v = num(fmtDk(e.target.value)) || 0; setSavedPdfs(prev => prev.map(x => x.id === p.id ? { ...x, amount: v } : x)); }} />
+                            <input className="qqb-input" style={matAmtInput} inputMode="decimal" placeholder="beløb" value={p.amount ? numToInput(p.amount) : ''} onChange={(e) => { const v = num(fmtDk(e.target.value)) || 0; setSavedPdfs(prev => prev.map(x => x.id === p.id ? { ...x, amount: v } : x)); }} />
                             <button onClick={() => setPdfToRemove(p)} title="Fjern PDF" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px', display: 'flex' }}><Trash2 size={16} /></button>
                         </div>
                     ))}
@@ -1485,7 +1500,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
                             <FileText size={18} color="#16a34a" style={{ flexShrink: 0 }} />
                             <span style={{ flex: 1, minWidth: 0, fontSize: '0.9rem', color: '#166534', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.file.name}</span>
-                            <input className="qqb-input" style={matAmtInput} inputMode="decimal" placeholder="beløb" value={f.amount ? fmtDk(String(f.amount)) : ''} onChange={(e) => { const v = num(fmtDk(e.target.value)) || 0; setMaterialFiles(prev => prev.map((x, idx) => idx === i ? { ...x, amount: v } : x)); }} />
+                            <input className="qqb-input" style={matAmtInput} inputMode="decimal" placeholder="beløb" value={f.amount ? numToInput(f.amount) : ''} onChange={(e) => { const v = num(fmtDk(e.target.value)) || 0; setMaterialFiles(prev => prev.map((x, idx) => idx === i ? { ...x, amount: v } : x)); }} />
                             <button onClick={() => setMaterialFiles(prev => prev.filter((_, idx) => idx !== i))} title="Fjern" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><Trash2 size={16} /></button>
                         </div>
                     ))}
@@ -2302,7 +2317,7 @@ export default function QuickQuoteBuilder({ carpenter, isMobile = false, onCance
                         <WorkBreakdownModal
                             mode="edit"
                             steps={breakdown}
-                            onChange={setBreakdown}
+                            onChange={(steps) => { breakdownTouched.current = true; setBreakdown(steps); }}
                             onClose={() => setShowBreakdown(false)}
                             hourlyRate={num(laborRate)}
                             onSeedStandard={() => seedChecklist(htmlToPlainLines(sanitizeHtml(workDescHtml)))}
