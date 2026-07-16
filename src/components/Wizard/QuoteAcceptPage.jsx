@@ -268,7 +268,8 @@ const QuoteAcceptPage = () => {
     }
 
     const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK', minimumFractionDigits: 0 }).format(amount);
+        // Samme talformat som PDF'en (altid 2 decimaler): 105.110,75 kr.
+        return new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
     };
 
     const calcData = lead?.raw_data?.calc_data;
@@ -382,11 +383,9 @@ const QuoteAcceptPage = () => {
                         <div style={{ padding: '32px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#f8fafc' }}>
                             <h3 style={{ margin: '0 0 20px 0', fontSize: '1.2rem', color: '#1e293b' }}>Samlet Tilbud</h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {Number(mq.materialSell) > 0 && <Row label={mq.laborMode === 'hourly' ? 'Materialer (estimat)' : 'Materialer'} amount={mq.materialSell} />}
-                                {Number(mq.laborTotal) > 0 && <Row label={mq.laborMode === 'hourly' ? `Arbejde (estimat · ${mq.laborHours || 0} timer)` : 'Arbejde (fast pris)'} amount={mq.laborTotal} />}
-                                {(mq.extras || []).map((ex, i) => (
-                                    <Row key={i} label={ex.desc || 'Tillæg'} amount={ex.amount} />
-                                ))}
+                                {/* Vis KUN totalerne — præcis som på PDF'en. Opdelingen i materialer/
+                                    arbejde/tillæg er intern kalkulation og skal ikke kunne aflæses af kunden. */}
+                                <Row label="I alt ekskl. moms" amount={Number(mq.totalExVat) || ((Number(mq.totalIncVat) || 0) - (Number(mq.vat) || 0))} />
                                 <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', paddingTop: '8px' }}>
                                     <span style={{ color: '#64748b' }}>Moms (25%)</span>
                                     <span style={{ color: '#64748b' }}>{formatCurrency(mq.vat)}</span>
